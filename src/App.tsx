@@ -10,8 +10,11 @@ import { BudgetStats } from '@/components/BudgetStats'
 import { SubmissionDialog } from '@/components/SubmissionDialog'
 import { BudgetAlerts } from '@/components/BudgetAlerts'
 import { SubmissionsTable } from '@/components/SubmissionsTable'
-import { Plus, Calendar, ChartBar, ListBullets, ArrowLeft, ArrowRight, MagnifyingGlass } from '@phosphor-icons/react'
+import { CategoryDialog } from '@/components/CategoryDialog'
+import { CategoryDetailView } from '@/components/CategoryDetailView'
+import { Plus, Calendar, ChartBar, ListBullets, ArrowLeft, ArrowRight, MagnifyingGlass, FolderOpen, Trash, Pencil } from '@phosphor-icons/react'
 import { Toaster } from '@/components/ui/sonner'
+import { toast } from 'sonner'
 import { 
   BudgetCategory, 
   Submission, 
@@ -23,6 +26,16 @@ import {
   calculateUsage
 } from '@/lib/budget-utils'
 import { BUDGET_CATEGORIES_2026 } from '@/lib/seed-data'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 function App() {
   const [categories, setCategories] = useKV<BudgetCategory[]>('budget-categories', [])
@@ -31,6 +44,12 @@ function App() {
   
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
+  const [editingCategory, setEditingCategory] = useState<BudgetCategory | undefined>(undefined)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+  const [preSelectedSubItem, setPreSelectedSubItem] = useState<string | undefined>(undefined)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'healthy' | 'warning' | 'exceeded'>('all')
@@ -53,10 +72,19 @@ function App() {
         categories: {}
       }
       cats.forEach(cat => {
+        const subItemsData: { [subItemId: string]: { allocated: number; used: number; submissions: Submission[] } } = {}
+        cat.subItems.forEach(subItem => {
+          subItemsData[subItem.id] = {
+            allocated: subItem.monthlyBudget,
+            used: 0,
+            submissions: []
+          }
+        })
         newMonthData.categories[cat.id] = {
           allocated: cat.monthlyBudget,
           used: 0,
-          submissions: []
+          submissions: [],
+          subItems: subItemsData
         }
       })
       return newMonthData
@@ -103,12 +131,13 @@ function App() {
     return submissions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [currentMonthData])
 
-  const handleSubmission = async (categoryId: string, amount: number, description: string): Promise<boolean> => {
+  const handleSubmission = async (categoryId: string, subItemId: string | undefined, amount: number, description: string): Promise<boolean> => {
     const cats = categories || []
     
     const newSubmission: Submission = {
       id: `sub-${Date.now()}`,
       categoryId,
+      subItemId,
       amount,
       description,
       date: new Date().toISOString(),
@@ -123,10 +152,19 @@ function App() {
           categories: {}
         }
         cats.forEach(cat => {
+          const subItemsData: { [subItemId: string]: { allocated: number; used: number; submissions: Submission[] } } = {}
+          cat.subItems.forEach(subItem => {
+            subItemsData[subItem.id] = {
+              allocated: subItem.monthlyBudget,
+              used: 0,
+              submissions: []
+            }
+          })
           updated[selectedMonth].categories[cat.id] = {
             allocated: cat.monthlyBudget,
             used: 0,
-            submissions: []
+            submissions: [],
+            subItems: subItemsData
           }
         })
       }
@@ -137,16 +175,73 @@ function App() {
       categoryData.submissions = [...categoryData.submissions, newSubmission]
       categoryData.used = categoryData.submissions.reduce((sum, sub) => sum + sub.amount, 0)
 
+      if (subItemId && categoryData.subItems[subItemId]) {
+        categoryData.subItems[subItemId].submissions = [...categoryData.subItems[subItemId].submissions, newSubmission]
+        categoryData.subItems[subItemId].used = categoryData.subItems[subItemId].submissions.reduce((sum, sub) => sum + sub.amount, 0)
+      }
+
       return updated
     })
 
     return true
   }
 
-  const getRemainingBudget = (categoryId: string): number => {
+  const getRemainingBudget = (categoryId: string, subItemId?: string): number => {
     const data = currentMonthData.categories[categoryId]
     if (!data) return 0
+    
+    if (subItemId && data.subItems[subItemId]) {
+      return data.subItems[subItemId].allocated - data.subItems[subItemId].used
+    }
+    
     return data.allocated - data.used
+  }
+
+  const handleSaveCategory = (categoryData: Omit<BudgetCategory, 'id'> & { id?: string }) => {
+    if (categoryData.id) {
+      setCategories((current) => 
+        (current || []).map(cat => 
+          cat.id === categoryData.id 
+            ? { ...categoryData, id: categoryData.id } as BudgetCategory
+            : cat
+        )
+      )
+    } else {
+      const newCategory: BudgetCategory = {
+        ...categoryData,
+        id: `cat-${Date.now()}`,
+        subItems: categoryData.subItems
+      }
+      setCategories((current) => [...(current || []), newCategory])
+    }
+  }
+
+  const handleDeleteCategory = (categoryId: string) => {
+    setCategoryToDelete(categoryId)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteCategory = () => {
+    if (categoryToDelete) {
+      setCategories((current) => (current || []).filter(cat => cat.id !== categoryToDelete))
+      toast.success('Kategori berhasil dihapus')
+      setCategoryToDelete(null)
+      setDeleteDialogOpen(false)
+    }
+  }
+
+  const handleEditCategory = (category: BudgetCategory) => {
+    setEditingCategory(category)
+    setCategoryDialogOpen(true)
+  }
+
+  const handleCategoryClick = (categoryId: string) => {
+    setSelectedCategoryId(categoryId)
+  }
+
+  const handleAddSubmissionFromDetail = (subItemId: string) => {
+    setPreSelectedSubItem(subItemId)
+    setDialogOpen(true)
   }
 
   const getCategoryName = (categoryId: string): string => {
@@ -187,7 +282,8 @@ function App() {
     
     if (statusFilter !== 'all') {
       filtered = filtered.filter(cat => {
-        const data = currentMonthData.categories[cat.id] || { allocated: cat.monthlyBudget, used: 0, submissions: [] }
+        const data = currentMonthData.categories[cat.id]
+        if (!data) return false
         const percentage = calculateUsage(data.allocated, data.used)
         
         if (statusFilter === 'exceeded') return percentage >= 100
@@ -199,6 +295,14 @@ function App() {
     
     return filtered
   }, [categories, searchQuery, statusFilter, currentMonthData])
+
+  const selectedCategory = selectedCategoryId 
+    ? (categories || []).find(c => c.id === selectedCategoryId)
+    : null
+
+  const selectedCategoryData = selectedCategoryId && currentMonthData.categories[selectedCategoryId]
+    ? currentMonthData.categories[selectedCategoryId]
+    : null
 
   return (
     <div className="min-h-screen bg-background">
@@ -241,17 +345,32 @@ function App() {
                   <ArrowRight size={16} />
                 </Button>
               </div>
-              <Button onClick={() => setDialogOpen(true)} className="gap-2">
-                <Plus size={16} weight="bold" />
-                Buat Pengajuan
-              </Button>
+              {!selectedCategoryId && (
+                <>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setEditingCategory(undefined)
+                      setCategoryDialogOpen(true)
+                    }} 
+                    className="gap-2"
+                  >
+                    <Plus size={16} weight="bold" />
+                    Tambah Kategori
+                  </Button>
+                  <Button onClick={() => setDialogOpen(true)} className="gap-2">
+                    <Plus size={16} weight="bold" />
+                    Buat Pengajuan
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {alerts.length > 0 && (
+        {alerts.length > 0 && !selectedCategoryId && (
           <div className="mb-6">
             <BudgetAlerts 
               alerts={alerts} 
@@ -261,110 +380,183 @@ function App() {
           </div>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="dashboard" className="gap-2">
-              <ChartBar size={16} weight="duotone" />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="submissions" className="gap-2">
-              <ListBullets size={16} weight="duotone" />
-              Pengajuan
-            </TabsTrigger>
-          </TabsList>
+        {selectedCategory && selectedCategoryData ? (
+          <CategoryDetailView
+            category={selectedCategory}
+            categoryData={selectedCategoryData}
+            onBack={() => setSelectedCategoryId(null)}
+            onEdit={() => handleEditCategory(selectedCategory)}
+            onAddSubmission={handleAddSubmissionFromDetail}
+          />
+        ) : (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="dashboard" className="gap-2">
+                <ChartBar size={16} weight="duotone" />
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="submissions" className="gap-2">
+                <ListBullets size={16} weight="duotone" />
+                Pengajuan
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <BudgetOverview
-                  totalAllocated={totalAllocated}
-                  totalUsed={totalUsed}
-                  totalRemaining={totalRemaining}
-                  categoryCount={(categories || []).length}
-                />
-              </div>
-
-              <div className="lg:col-span-1">
-                <BudgetStats 
-                  categories={categories || []}
-                  currentMonthData={currentMonthData}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <div className="relative flex-1 w-full sm:max-w-md">
-                <MagnifyingGlass 
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" 
-                  size={18}
-                />
-                <Input
-                  placeholder="Cari kategori program..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Status</SelectItem>
-                  <SelectItem value="healthy">Sehat</SelectItem>
-                  <SelectItem value="warning">Peringatan</SelectItem>
-                  <SelectItem value="exceeded">Terlampaui</SelectItem>
-                </SelectContent>
-              </Select>
-              {(searchQuery || statusFilter !== 'all') && (
-                <p className="text-sm text-muted-foreground whitespace-nowrap">
-                  {filteredCategories.length} dari {(categories || []).length} kategori
-                </p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCategories.map(category => {
-                const data = currentMonthData.categories[category.id] || { allocated: category.monthlyBudget, used: 0, submissions: [] }
-                return (
-                  <BudgetCard
-                    key={category.id}
-                    categoryName={category.name}
-                    allocated={data.allocated}
-                    used={data.used}
-                    submissionCount={data.submissions.length}
+            <TabsContent value="dashboard" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                  <BudgetOverview
+                    totalAllocated={totalAllocated}
+                    totalUsed={totalUsed}
+                    totalRemaining={totalRemaining}
+                    categoryCount={(categories || []).length}
                   />
-                )
-              })}
-            </div>
+                </div>
 
-            {filteredCategories.length === 0 && (searchQuery || statusFilter !== 'all') && (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">
-                  {searchQuery 
-                    ? `Tidak ada kategori yang cocok dengan "${searchQuery}"`
-                    : 'Tidak ada kategori dengan status yang dipilih'}
-                </p>
+                <div className="lg:col-span-1">
+                  <BudgetStats 
+                    categories={categories || []}
+                    currentMonthData={currentMonthData}
+                  />
+                </div>
               </div>
-            )}
-          </TabsContent>
 
-          <TabsContent value="submissions">
-            <SubmissionsTable 
-              submissions={allSubmissions}
-              getCategoryName={getCategoryName}
-            />
-          </TabsContent>
-        </Tabs>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="relative flex-1 w-full sm:max-w-md">
+                  <MagnifyingGlass 
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" 
+                    size={18}
+                  />
+                  <Input
+                    placeholder="Cari kategori program..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Status</SelectItem>
+                    <SelectItem value="healthy">Sehat</SelectItem>
+                    <SelectItem value="warning">Peringatan</SelectItem>
+                    <SelectItem value="exceeded">Terlampaui</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(searchQuery || statusFilter !== 'all') && (
+                  <p className="text-sm text-muted-foreground whitespace-nowrap">
+                    {filteredCategories.length} dari {(categories || []).length} kategori
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredCategories.map(category => {
+                  const data = currentMonthData.categories[category.id]
+                  if (!data) return null
+                  
+                  return (
+                    <div key={category.id} className="relative group">
+                      <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEditCategory(category)
+                          }}
+                        >
+                          <Pencil size={14} />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteCategory(category.id)
+                          }}
+                        >
+                          <Trash size={14} />
+                        </Button>
+                      </div>
+                      <div onClick={() => handleCategoryClick(category.id)} className="cursor-pointer">
+                        <BudgetCard
+                          categoryName={category.name}
+                          allocated={data.allocated}
+                          used={data.used}
+                          submissionCount={data.submissions.length}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {filteredCategories.length === 0 && (searchQuery || statusFilter !== 'all') && (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">
+                    {searchQuery 
+                      ? `Tidak ada kategori yang cocok dengan "${searchQuery}"`
+                      : 'Tidak ada kategori dengan status yang dipilih'}
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="submissions">
+              <SubmissionsTable 
+                submissions={allSubmissions}
+                getCategoryName={getCategoryName}
+              />
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
 
       <SubmissionDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open)
+          if (!open) {
+            setPreSelectedSubItem(undefined)
+          }
+        }}
         categories={categories || []}
         onSubmit={handleSubmission}
         getRemainingBudget={getRemainingBudget}
+        preSelectedCategory={selectedCategoryId || undefined}
+        preSelectedSubItem={preSelectedSubItem}
       />
+
+      <CategoryDialog
+        open={categoryDialogOpen}
+        onOpenChange={(open) => {
+          setCategoryDialogOpen(open)
+          if (!open) {
+            setEditingCategory(undefined)
+          }
+        }}
+        category={editingCategory}
+        onSave={handleSaveCategory}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Kategori</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus kategori ini? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteCategory}>Hapus</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Toaster />
     </div>

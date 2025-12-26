@@ -1,13 +1,21 @@
+export interface BudgetSubItem {
+  id: string
+  name: string
+  monthlyBudget: number
+}
+
 export interface BudgetCategory {
   id: string
   name: string
   monthlyBudget: number
   icon?: string
+  subItems: BudgetSubItem[]
 }
 
 export interface Submission {
   id: string
   categoryId: string
+  subItemId?: string
   amount: number
   description: string
   date: string
@@ -21,6 +29,13 @@ export interface MonthlyBudgetData {
       allocated: number
       used: number
       submissions: Submission[]
+      subItems: {
+        [subItemId: string]: {
+          allocated: number
+          used: number
+          submissions: Submission[]
+        }
+      }
     }
   }
 }

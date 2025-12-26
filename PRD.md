@@ -1,6 +1,6 @@
 # Planning Guide
 
-A comprehensive budgeting dashboard system for Human Capital programs (HCGA 2026) that enables budget tracking, submission management, and automated notifications when budgets approach or exceed limits.
+A comprehensive budgeting dashboard system for Human Capital programs (HCGA 2026) that enables hierarchical budget tracking with main categories and detailed sub-items, submission management, and automated notifications when budgets approach or exceed limits.
 
 **Experience Qualities**: 
 1. **Transparent** - Users should always know their current budget status, remaining funds, and submission history at a glance
@@ -8,37 +8,51 @@ A comprehensive budgeting dashboard system for Human Capital programs (HCGA 2026
 3. **Efficient** - Submitting new budget requests should be quick and straightforward with minimal friction
 
 **Complexity Level**: Complex Application (advanced functionality, likely with multiple views)
-- This application manages 50+ budget categories from the HCGA 2026 budget allocation, requiring multiple interconnected features including budget category management, submission tracking, real-time budget calculations, time-based budget periods, notification systems, and comprehensive data visualization across different views.
+- This application manages hierarchical budget categories for HCGA 2026 with main categories (Biaya Kantor, Biaya Transport, Biaya Pemeliharaan, Biaya Umum, Honorarium) each containing multiple sub-items, requiring CRUD operations on categories, real-time budget calculations at both category and sub-item levels, time-based budget periods, notification systems, and comprehensive data visualization across different views.
 
 ## Essential Features
 
-**Budget Category Management**
-- Functionality: Display all 50+ HC program categories (including BIAYA KANTOR, EAM, EVENT BUDAYA, Certified Training Programs, Technical Training, etc.) with their monthly budget allocations, current usage, and remaining amounts
-- Purpose: Provides complete visibility into budget distribution across diverse program types and helps prevent overspending
-- Trigger: Automatically loads on dashboard view
-- Progression: Dashboard loads → Budget cards display → Real-time usage shown → Color-coded status indicators → Search/filter capabilities
-- Success criteria: All categories show accurate current vs. allocated amounts with visual progress indicators and users can quickly find specific programs
+**Hierarchical Budget Category Management**
+- Functionality: Display main budget categories (BIAYA KANTOR, BIAYA TRANSPORT, BIAYA PEMELIHARAAN, BIAYA UMUM, HONORARIUM) as cards on dashboard; clicking a card reveals detailed sub-items within that category
+- Purpose: Provides organized view of budget hierarchy, allowing users to drill down from high-level categories to specific line items
+- Trigger: Dashboard automatically shows main categories; clicking a category card navigates to detail view
+- Progression: Dashboard loads → Main category cards display → User clicks card → Detail view shows sub-items → Can add submissions to specific sub-items
+- Success criteria: Main categories aggregate sub-item totals accurately, drill-down navigation is intuitive, users can easily navigate back to main view
+
+**Category CRUD Operations**
+- Functionality: Add new main categories with sub-items, edit existing categories and their sub-items, delete categories
+- Purpose: Allows budget administrators to maintain and update the budget structure as organizational needs change
+- Trigger: "Tambah Kategori" button in header, edit/delete buttons on category cards
+- Progression: Click add → Dialog opens → Enter category name → Add sub-items with names and budgets → Save → Category appears on dashboard
+- Success criteria: Categories can be created with multiple sub-items, edited to modify structure, and deleted with confirmation
+
+**Sub-Item Budget Tracking**
+- Functionality: Each sub-item within a category tracks its own allocated budget, used amount, submissions, and remaining balance
+- Purpose: Enables granular budget control at the line-item level while maintaining category-level aggregation
+- Trigger: View category detail page
+- Progression: Click category card → Detail view loads → Sub-items display with individual budgets → Each shows usage percentage and status
+- Success criteria: Sub-item budgets are independently tracked, category totals correctly aggregate from sub-items
 
 **Budget Search & Filter**
-- Functionality: Real-time search across 50+ budget categories to quickly locate specific programs
+- Functionality: Real-time search across main categories with status filtering (all, healthy, warning, exceeded)
 - Purpose: Improves usability when dealing with large number of budget categories
-- Trigger: User types in search field
+- Trigger: User types in search field or selects filter
 - Progression: Type query → Filter results in real-time → Show match count → Clear search to reset
-- Success criteria: Search returns relevant results instantly and shows clear feedback on number of matches
+- Success criteria: Search returns relevant categories instantly and shows clear feedback on number of matches
 
 **Budget Overview Dashboard**
 - Functionality: High-level summary cards showing total allocated budget, total used, remaining budget, and category count
 - Purpose: Provides executive overview of entire HCGA 2026 budget status at a glance
 - Trigger: Automatically displays at top of dashboard
-- Progression: Page loads → Calculate totals → Display summary cards → Update on any submission
-- Success criteria: Accurate real-time totals across all 50+ categories with clear visual hierarchy
+- Progression: Page loads → Calculate totals across all categories and sub-items → Display summary cards → Update on any submission
+- Success criteria: Accurate real-time totals across all categories with clear visual hierarchy
 
 **Submission Creation**
-- Functionality: Create new budget submissions with category selection, amount, description, and automatic date assignment
-- Purpose: Allows users to request budget allocation and automatically deducts from available category budgets
-- Trigger: User clicks "New Submission" button
-- Progression: Click button → Dialog opens → Fill form (category, amount, description) → Submit → Budget automatically deducted → Confirmation shown
-- Success criteria: Submission is created, budget is updated in real-time, and user sees updated balances immediately
+- Functionality: Create new budget submissions by selecting a category, then a sub-item, entering amount and description
+- Purpose: Allows users to request budget allocation from specific sub-items and automatically deducts from available budgets
+- Trigger: User clicks "Buat Pengajuan" button or "Buat Pengajuan" on a specific sub-item
+- Progression: Click button → Dialog opens → Select category → Select sub-item → Fill amount and description → Submit → Budget automatically deducted from sub-item and category → Confirmation shown
+- Success criteria: Submission is created, sub-item and category budgets are updated in real-time, and user sees updated balances immediately
 
 **Budget Status Notifications**
 - Functionality: Display warning alerts when budgets reach 80% threshold and critical alerts when exceeded
@@ -63,11 +77,14 @@ A comprehensive budgeting dashboard system for Human Capital programs (HCGA 2026
 
 ## Edge Case Handling
 
-- **Insufficient Budget**: When submission amount exceeds remaining budget, show clear error message with current available amount and prevent submission
+- **Insufficient Budget**: When submission amount exceeds remaining sub-item budget, show clear error message with current available amount and prevent submission
 - **Concurrent Submissions**: Handle multiple users submitting simultaneously by validating budget availability at submission time
 - **Month Transitions**: Automatically switch to new month when date changes and reset budgets appropriately
 - **Empty States**: Display helpful empty states when no submissions exist for a period with call-to-action to create first submission
 - **Invalid Amounts**: Prevent negative or zero amounts, validate numeric input, and enforce reasonable maximum values
+- **Category Deletion**: Confirm before deleting categories; prevent deletion if there are existing submissions for that category in any month
+- **Empty Sub-Items**: Require at least one sub-item when creating or editing a category
+- **Budget Aggregation**: Ensure category total budget always equals sum of all sub-item budgets
 
 ## Design Direction
 
@@ -119,21 +136,24 @@ Animations should feel precise and purposeful, like a well-tuned financial instr
 ## Component Selection
 
 - **Components**: 
-  - Card (primary container for budget categories, heavily used throughout)
-  - Button (primary/secondary/destructive variants for actions)
-  - Dialog (for submission creation form)
+  - Card (primary container for budget categories and sub-items, heavily used throughout)
+  - Button (primary/secondary/destructive variants for actions, including edit/delete on categories)
+  - Dialog (for submission creation and category management forms)
   - Alert (for budget threshold warnings)
-  - Progress (visual budget usage indicators)
-  - Select (month/category choosers)
-  - Input (amount and description fields)
+  - AlertDialog (for category deletion confirmation)
+  - Progress (visual budget usage indicators at category and sub-item level)
+  - Select (month/category/sub-item choosers)
+  - Input (amount, description, category name, sub-item name fields)
   - Label (form field labels)
   - Table (submission history)
-  - Badge (status indicators for submissions)
+  - Badge (status indicators for submissions and budget health)
   - Tabs (switching between dashboard/submissions views)
   - Separator (visual section breaks)
 
 - **Customizations**: 
-  - Custom budget card component with integrated progress bar and status indicators
+  - Custom budget card component with integrated progress bar, status indicators, and hover actions for edit/delete
+  - Custom category detail view component showing hierarchical sub-item structure
+  - Custom category dialog for adding/editing categories with dynamic sub-item management
   - Custom currency input with automatic formatting
   - Custom alert variant for 80% threshold warnings (distinct from 100% exceeded)
   - Custom metric display component for large financial numbers
@@ -141,19 +161,24 @@ Animations should feel precise and purposeful, like a well-tuned financial instr
 - **States**: 
   - Buttons: Default has shadow, hover lifts with stronger shadow, active scales down, disabled is muted
   - Inputs: Default has subtle border, focus has accent ring and stronger border, error has destructive border
-  - Cards: Default has subtle shadow, hover on interactive cards lifts slightly
+  - Cards: Default has subtle shadow, hover on interactive cards lifts slightly and reveals edit/delete actions
   - Progress bars: Color changes based on percentage (green < 70%, amber 70-90%, red > 90%)
 
 - **Icon Selection**: 
-  - Plus (add submission)
+  - Plus (add submission, add category, add sub-item)
+  - Pencil (edit category)
+  - Trash (delete category)
+  - ArrowLeft (back to main categories, navigate months)
+  - ArrowRight (navigate months)
+  - FolderOpen (category detail view)
   - Wallet (budget categories)
   - TrendUp (budget increase)
   - TrendDown (budget decrease)  
   - Warning (threshold alerts)
   - Calendar (month selector)
-  - ArrowLeft/ArrowRight (month navigation)
   - ListBullets (submission history)
   - ChartBar (dashboard view)
+  - MagnifyingGlass (search)
 
 - **Spacing**: 
   - Card padding: p-6
@@ -164,8 +189,11 @@ Animations should feel precise and purposeful, like a well-tuned financial instr
 
 - **Mobile**: 
   - Budget cards stack vertically on mobile
+  - Category detail view sub-items stack vertically
   - Table switches to card-based layout for submissions
   - Month navigation becomes dropdown instead of arrows
   - Dialog forms maintain full-width inputs
   - Alert banners stack and take full width
   - Reduce padding to p-4 on containers
+  - Edit/delete buttons on categories remain visible on mobile (no hover state)
+  - Category management dialog scrolls vertically for long sub-item lists
