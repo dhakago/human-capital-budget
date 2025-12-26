@@ -51,6 +51,8 @@
   --ring: oklch(0.68 0.18 25);
 
   --radius: 0.5rem;
+
+  --spacing: 0.20rem;
 }
 
 @theme {
