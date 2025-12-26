@@ -21,6 +21,7 @@ interface CategoryDetailViewProps {
   onBack: () => void
   onEdit: () => void
   onAddSubmission: (subItemId: string) => void
+  isLocked?: boolean
 }
 
 export function CategoryDetailView({ 
@@ -28,7 +29,8 @@ export function CategoryDetailView({
   categoryData, 
   onBack, 
   onEdit,
-  onAddSubmission 
+  onAddSubmission,
+  isLocked = false
 }: CategoryDetailViewProps) {
   const percentage = calculateUsage(categoryData.allocated, categoryData.used)
   const statusColor = getStatusColor(percentage)
@@ -41,10 +43,12 @@ export function CategoryDetailView({
           <ArrowLeft size={16} />
           Kembali
         </Button>
-        <Button variant="outline" onClick={onEdit} className="gap-2">
-          <Pencil size={16} />
-          Edit Kategori
-        </Button>
+        {!isLocked && (
+          <Button variant="outline" onClick={onEdit} className="gap-2">
+            <Pencil size={16} />
+            Edit Kategori
+          </Button>
+        )}
       </div>
 
       <Card>

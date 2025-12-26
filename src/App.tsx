@@ -12,7 +12,7 @@ import { BudgetAlerts } from '@/components/BudgetAlerts'
 import { SubmissionsTable } from '@/components/SubmissionsTable'
 import { CategoryDialog } from '@/components/CategoryDialog'
 import { CategoryDetailView } from '@/components/CategoryDetailView'
-import { Plus, Calendar, ChartBar, ListBullets, ArrowLeft, ArrowRight, MagnifyingGlass, FolderOpen, Trash, Pencil } from '@phosphor-icons/react'
+import { Plus, Calendar, ChartBar, ListBullets, ArrowLeft, ArrowRight, MagnifyingGlass, FolderOpen, Trash, Pencil, Lock, LockOpen } from '@phosphor-icons/react'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
 import { 
@@ -41,6 +41,7 @@ function App() {
   const [categories, setCategories] = useKV<BudgetCategory[]>('budget-categories', [])
   const [monthlyData, setMonthlyData] = useKV<{ [month: string]: MonthlyBudgetData }>('monthly-budget-data', {})
   const [dismissedAlerts, setDismissedAlerts] = useKV<string[]>('dismissed-alerts', [])
+  const [isLocked, setIsLocked] = useKV<boolean>('budget-locked', false)
   
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -198,6 +199,11 @@ function App() {
   }
 
   const handleSaveCategory = (categoryData: Omit<BudgetCategory, 'id'> & { id?: string }) => {
+    if (isLocked) {
+      toast.error('Anggaran terkunci. Tidak dapat mengedit kategori.')
+      return
+    }
+    
     if (categoryData.id) {
       setCategories((current) => 
         (current || []).map(cat => 
@@ -217,6 +223,10 @@ function App() {
   }
 
   const handleDeleteCategory = (categoryId: string) => {
+    if (isLocked) {
+      toast.error('Anggaran terkunci. Tidak dapat menghapus kategori.')
+      return
+    }
     setCategoryToDelete(categoryId)
     setDeleteDialogOpen(true)
   }
@@ -231,6 +241,10 @@ function App() {
   }
 
   const handleEditCategory = (category: BudgetCategory) => {
+    if (isLocked) {
+      toast.error('Anggaran terkunci. Tidak dapat mengedit kategori.')
+      return
+    }
     setEditingCategory(category)
     setCategoryDialogOpen(true)
   }
@@ -314,6 +328,27 @@ function App() {
               <p className="text-muted-foreground mt-1">Human Capital & General Affairs</p>
             </div>
             <div className="flex items-center gap-3">
+              <Button
+                variant={isLocked ? "destructive" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setIsLocked((current) => !current)
+                  toast.success(isLocked ? 'Anggaran dibuka untuk editing' : 'Anggaran dikunci')
+                }}
+                className="gap-2"
+              >
+                {isLocked ? (
+                  <>
+                    <Lock size={16} weight="bold" />
+                    Terkunci
+                  </>
+                ) : (
+                  <>
+                    <LockOpen size={16} weight="bold" />
+                    Terbuka
+                  </>
+                )}
+              </Button>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -345,7 +380,7 @@ function App() {
                   <ArrowRight size={16} />
                 </Button>
               </div>
-              {!selectedCategoryId && (
+              {!selectedCategoryId && !isLocked && (
                 <>
                   <Button 
                     variant="outline"
@@ -358,11 +393,13 @@ function App() {
                     <Plus size={16} weight="bold" />
                     Tambah Kategori
                   </Button>
-                  <Button onClick={() => setDialogOpen(true)} className="gap-2">
-                    <Plus size={16} weight="bold" />
-                    Buat Pengajuan
-                  </Button>
                 </>
+              )}
+              {!selectedCategoryId && (
+                <Button onClick={() => setDialogOpen(true)} className="gap-2">
+                  <Plus size={16} weight="bold" />
+                  Buat Pengajuan
+                </Button>
               )}
             </div>
           </div>
@@ -387,6 +424,7 @@ function App() {
             onBack={() => setSelectedCategoryId(null)}
             onEdit={() => handleEditCategory(selectedCategory)}
             onAddSubmission={handleAddSubmissionFromDetail}
+            isLocked={isLocked}
           />
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -458,30 +496,32 @@ function App() {
                   
                   return (
                     <div key={category.id} className="relative group">
-                      <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          size="icon"
-                          variant="secondary"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleEditCategory(category)
-                          }}
-                        >
-                          <Pencil size={14} />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="destructive"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteCategory(category.id)
-                          }}
-                        >
-                          <Trash size={14} />
-                        </Button>
-                      </div>
+                      {!isLocked && (
+                        <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            size="icon"
+                            variant="secondary"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditCategory(category)
+                            }}
+                          >
+                            <Pencil size={14} />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="destructive"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteCategory(category.id)
+                            }}
+                          >
+                            <Trash size={14} />
+                          </Button>
+                        </div>
+                      )}
                       <div onClick={() => handleCategoryClick(category.id)} className="cursor-pointer">
                         <BudgetCard
                           categoryName={category.name}
