@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,8 +14,15 @@ interface CategoryDialogProps {
 }
 
 export function CategoryDialog({ open, onOpenChange, category, onSave }: CategoryDialogProps) {
-  const [name, setName] = useState(category?.name || '')
-  const [subItems, setSubItems] = useState<BudgetSubItem[]>(category?.subItems || [])
+  const [name, setName] = useState('')
+  const [subItems, setSubItems] = useState<BudgetSubItem[]>([])
+
+  useEffect(() => {
+    if (open) {
+      setName(category?.name || '')
+      setSubItems(category?.subItems || [])
+    }
+  }, [open, category])
 
   const handleAddSubItem = () => {
     setSubItems([...subItems, { id: `sub-${Date.now()}`, name: '', monthlyBudget: 0 }])
