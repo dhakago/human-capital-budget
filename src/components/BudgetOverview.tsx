@@ -13,7 +13,7 @@ interface BudgetOverviewProps {
 export function BudgetOverview({ totalAllocated, totalUsed, totalRemaining, categoryCount }: BudgetOverviewProps) {
   const usagePercentage = totalAllocated > 0 ? Math.round((totalUsed / totalAllocated) * 100) : 0
 
-  const stats = [
+  const topRowStats = [
     {
       title: 'Total Anggaran',
       value: totalAllocated,
@@ -22,18 +22,22 @@ export function BudgetOverview({ totalAllocated, totalUsed, totalRemaining, cate
       bgColor: 'bg-primary/10'
     },
     {
-      title: 'Terpakai',
-      value: totalUsed,
-      icon: TrendDown,
-      color: 'text-accent',
-      bgColor: 'bg-accent/10'
-    },
-    {
       title: 'Sisa Anggaran',
       value: totalRemaining,
       icon: TrendUp,
       color: totalRemaining >= 0 ? 'text-success' : 'text-destructive',
       bgColor: totalRemaining >= 0 ? 'bg-success/10' : 'bg-destructive/10'
+    }
+  ]
+
+  const bottomRowStats = [
+    {
+      title: 'Terpakai',
+      value: totalUsed,
+      icon: TrendDown,
+      color: 'text-accent',
+      bgColor: 'bg-accent/10',
+      showPercentage: true
     },
     {
       title: 'Kategori Program',
@@ -46,8 +50,8 @@ export function BudgetOverview({ totalAllocated, totalUsed, totalRemaining, cate
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {stats.map((stat, index) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {topRowStats.map((stat, index) => (
         <motion.div
           key={stat.title}
           initial={{ opacity: 0, y: 20 }}
@@ -60,9 +64,33 @@ export function BudgetOverview({ totalAllocated, totalUsed, totalRemaining, cate
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground mb-2">{stat.title}</p>
                   <p className="font-display font-bold text-2xl tabular-nums">
+                    {formatCurrency(stat.value as number)}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-lg ${stat.bgColor}`}>
+                  <stat.icon className={stat.color} size={24} weight="duotone" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      ))}
+      {bottomRowStats.map((stat, index) => (
+        <motion.div
+          key={stat.title}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: (index + 2) * 0.1 }}
+        >
+          <Card className="hover:shadow-md transition-shadow duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground mb-2">{stat.title}</p>
+                  <p className="font-display font-bold text-2xl tabular-nums">
                     {stat.isCount ? stat.value : formatCurrency(stat.value as number)}
                   </p>
-                  {stat.title === 'Terpakai' && (
+                  {stat.showPercentage && (
                     <p className="text-xs text-muted-foreground mt-1">
                       {usagePercentage}% dari total
                     </p>

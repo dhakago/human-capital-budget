@@ -274,81 +274,79 @@ function App() {
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
-            <BudgetOverview
-              totalAllocated={totalAllocated}
-              totalUsed={totalUsed}
-              totalRemaining={totalRemaining}
-              categoryCount={(categories || []).length}
-            />
-
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <div className="relative flex-1 w-full sm:max-w-md">
-                    <MagnifyingGlass 
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" 
-                      size={18}
-                    />
-                    <Input
-                      placeholder="Cari kategori program..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Status</SelectItem>
-                      <SelectItem value="healthy">Sehat</SelectItem>
-                      <SelectItem value="warning">Peringatan</SelectItem>
-                      <SelectItem value="exceeded">Terlampaui</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {(searchQuery || statusFilter !== 'all') && (
-                    <p className="text-sm text-muted-foreground whitespace-nowrap">
-                      {filteredCategories.length} dari {(categories || []).length} kategori
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredCategories.map(category => {
-                    const data = currentMonthData.categories[category.id] || { allocated: category.monthlyBudget, used: 0, submissions: [] }
-                    return (
-                      <BudgetCard
-                        key={category.id}
-                        categoryName={category.name}
-                        allocated={data.allocated}
-                        used={data.used}
-                        submissionCount={data.submissions.length}
-                      />
-                    )
-                  })}
-                </div>
-
-                {filteredCategories.length === 0 && (searchQuery || statusFilter !== 'all') && (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">
-                      {searchQuery 
-                        ? `Tidak ada kategori yang cocok dengan "${searchQuery}"`
-                        : 'Tidak ada kategori dengan status yang dipilih'}
-                    </p>
-                  </div>
-                )}
+                <BudgetOverview
+                  totalAllocated={totalAllocated}
+                  totalUsed={totalUsed}
+                  totalRemaining={totalRemaining}
+                  categoryCount={(categories || []).length}
+                />
               </div>
 
               <div className="lg:col-span-1">
-                <div className="sticky top-6">
-                  <BudgetStats 
-                    categories={categories || []}
-                    currentMonthData={currentMonthData}
-                  />
-                </div>
+                <BudgetStats 
+                  categories={categories || []}
+                  currentMonthData={currentMonthData}
+                />
               </div>
             </div>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="relative flex-1 w-full sm:max-w-md">
+                <MagnifyingGlass 
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" 
+                  size={18}
+                />
+                <Input
+                  placeholder="Cari kategori program..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Status</SelectItem>
+                  <SelectItem value="healthy">Sehat</SelectItem>
+                  <SelectItem value="warning">Peringatan</SelectItem>
+                  <SelectItem value="exceeded">Terlampaui</SelectItem>
+                </SelectContent>
+              </Select>
+              {(searchQuery || statusFilter !== 'all') && (
+                <p className="text-sm text-muted-foreground whitespace-nowrap">
+                  {filteredCategories.length} dari {(categories || []).length} kategori
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredCategories.map(category => {
+                const data = currentMonthData.categories[category.id] || { allocated: category.monthlyBudget, used: 0, submissions: [] }
+                return (
+                  <BudgetCard
+                    key={category.id}
+                    categoryName={category.name}
+                    allocated={data.allocated}
+                    used={data.used}
+                    submissionCount={data.submissions.length}
+                  />
+                )
+              })}
+            </div>
+
+            {filteredCategories.length === 0 && (searchQuery || statusFilter !== 'all') && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">
+                  {searchQuery 
+                    ? `Tidak ada kategori yang cocok dengan "${searchQuery}"`
+                    : 'Tidak ada kategori dengan status yang dipilih'}
+                </p>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="submissions">
