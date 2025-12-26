@@ -1,13 +1,16 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { BudgetCard } from '@/components/BudgetCard'
+import { BudgetOverview } from '@/components/BudgetOverview'
+import { BudgetStats } from '@/components/BudgetStats'
 import { SubmissionDialog } from '@/components/SubmissionDialog'
 import { BudgetAlerts } from '@/components/BudgetAlerts'
 import { SubmissionsTable } from '@/components/SubmissionsTable'
-import { Plus, Calendar, ChartBar, ListBullets, ArrowLeft, ArrowRight } from '@phosphor-icons/react'
+import { Plus, Calendar, ChartBar, ListBullets, ArrowLeft, ArrowRight, MagnifyingGlass } from '@phosphor-icons/react'
 import { Toaster } from '@/components/ui/sonner'
 import { 
   BudgetCategory, 
@@ -19,15 +22,24 @@ import {
   formatMonth,
   calculateUsage
 } from '@/lib/budget-utils'
+import { BUDGET_CATEGORIES_2026 } from '@/lib/seed-data'
 
 function App() {
-  const [categories] = useKV<BudgetCategory[]>('budget-categories', [])
+  const [categories, setCategories] = useKV<BudgetCategory[]>('budget-categories', [])
   const [monthlyData, setMonthlyData] = useKV<{ [month: string]: MonthlyBudgetData }>('monthly-budget-data', {})
   const [dismissedAlerts, setDismissedAlerts] = useKV<string[]>('dismissed-alerts', [])
   
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const [dialogOpen, setDialogOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('dashboard')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'healthy' | 'warning' | 'exceeded'>('all')
+
+  useEffect(() => {
+    if (!categories || categories.length === 0) {
+      setCategories(BUDGET_CATEGORIES_2026)
+    }
+  }, [])
 
   const monthOptions = getMonthOptions()
 
@@ -160,14 +172,42 @@ function App() {
   const totalUsed = Object.values(currentMonthData.categories).reduce((sum, data) => sum + data.used, 0)
   const totalRemaining = totalAllocated - totalUsed
 
+  const filteredCategories = useMemo(() => {
+    const cats = categories || []
+    
+    let filtered = cats
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(cat => 
+        cat.name.toLowerCase().includes(query) ||
+        cat.id.toLowerCase().includes(query)
+      )
+    }
+    
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(cat => {
+        const data = currentMonthData.categories[cat.id] || { allocated: cat.monthlyBudget, used: 0, submissions: [] }
+        const percentage = calculateUsage(data.allocated, data.used)
+        
+        if (statusFilter === 'exceeded') return percentage >= 100
+        if (statusFilter === 'warning') return percentage >= 80 && percentage < 100
+        if (statusFilter === 'healthy') return percentage < 80
+        return true
+      })
+    }
+    
+    return filtered
+  }, [categories, searchQuery, statusFilter, currentMonthData])
+
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="font-display text-3xl font-bold">Budget Management</h1>
-              <p className="text-muted-foreground mt-1">Human Capital Programs</p>
+              <h1 className="font-display text-3xl font-bold">Budget HCGA 2026</h1>
+              <p className="text-muted-foreground mt-1">Human Capital & General Affairs</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
@@ -234,19 +274,80 @@ function App() {
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(categories || []).map(category => {
-                const data = currentMonthData.categories[category.id] || { allocated: category.monthlyBudget, used: 0, submissions: [] }
-                return (
-                  <BudgetCard
-                    key={category.id}
-                    categoryName={category.name}
-                    allocated={data.allocated}
-                    used={data.used}
-                    submissionCount={data.submissions.length}
+            <BudgetOverview
+              totalAllocated={totalAllocated}
+              totalUsed={totalUsed}
+              totalRemaining={totalRemaining}
+              categoryCount={(categories || []).length}
+            />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <div className="relative flex-1 w-full sm:max-w-md">
+                    <MagnifyingGlass 
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" 
+                      size={18}
+                    />
+                    <Input
+                      placeholder="Cari kategori program..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Status</SelectItem>
+                      <SelectItem value="healthy">Sehat</SelectItem>
+                      <SelectItem value="warning">Peringatan</SelectItem>
+                      <SelectItem value="exceeded">Terlampaui</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {(searchQuery || statusFilter !== 'all') && (
+                    <p className="text-sm text-muted-foreground whitespace-nowrap">
+                      {filteredCategories.length} dari {(categories || []).length} kategori
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {filteredCategories.map(category => {
+                    const data = currentMonthData.categories[category.id] || { allocated: category.monthlyBudget, used: 0, submissions: [] }
+                    return (
+                      <BudgetCard
+                        key={category.id}
+                        categoryName={category.name}
+                        allocated={data.allocated}
+                        used={data.used}
+                        submissionCount={data.submissions.length}
+                      />
+                    )
+                  })}
+                </div>
+
+                {filteredCategories.length === 0 && (searchQuery || statusFilter !== 'all') && (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">
+                      {searchQuery 
+                        ? `Tidak ada kategori yang cocok dengan "${searchQuery}"`
+                        : 'Tidak ada kategori dengan status yang dipilih'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="lg:col-span-1">
+                <div className="sticky top-6">
+                  <BudgetStats 
+                    categories={categories || []}
+                    currentMonthData={currentMonthData}
                   />
-                )
-              })}
+                </div>
+              </div>
             </div>
           </TabsContent>
 

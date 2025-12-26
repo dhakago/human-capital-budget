@@ -1,6 +1,6 @@
 # Planning Guide
 
-A comprehensive budgeting dashboard system for Human Capital programs that enables budget tracking, submission management, and automated notifications when budgets approach or exceed limits.
+A comprehensive budgeting dashboard system for Human Capital programs (HCGA 2026) that enables budget tracking, submission management, and automated notifications when budgets approach or exceed limits.
 
 **Experience Qualities**: 
 1. **Transparent** - Users should always know their current budget status, remaining funds, and submission history at a glance
@@ -8,16 +8,30 @@ A comprehensive budgeting dashboard system for Human Capital programs that enabl
 3. **Efficient** - Submitting new budget requests should be quick and straightforward with minimal friction
 
 **Complexity Level**: Complex Application (advanced functionality, likely with multiple views)
-- This application requires multiple interconnected features including budget category management, submission tracking, real-time budget calculations, time-based budget periods, notification systems, and comprehensive data visualization across different views.
+- This application manages 50+ budget categories from the HCGA 2026 budget allocation, requiring multiple interconnected features including budget category management, submission tracking, real-time budget calculations, time-based budget periods, notification systems, and comprehensive data visualization across different views.
 
 ## Essential Features
 
 **Budget Category Management**
-- Functionality: Display all HC program categories with their monthly budget allocations, current usage, and remaining amounts
-- Purpose: Provides complete visibility into budget distribution and helps prevent overspending
+- Functionality: Display all 50+ HC program categories (including BIAYA KANTOR, EAM, EVENT BUDAYA, Certified Training Programs, Technical Training, etc.) with their monthly budget allocations, current usage, and remaining amounts
+- Purpose: Provides complete visibility into budget distribution across diverse program types and helps prevent overspending
 - Trigger: Automatically loads on dashboard view
-- Progression: Dashboard loads → Budget cards display → Real-time usage shown → Color-coded status indicators
-- Success criteria: All categories show accurate current vs. allocated amounts with visual progress indicators
+- Progression: Dashboard loads → Budget cards display → Real-time usage shown → Color-coded status indicators → Search/filter capabilities
+- Success criteria: All categories show accurate current vs. allocated amounts with visual progress indicators and users can quickly find specific programs
+
+**Budget Search & Filter**
+- Functionality: Real-time search across 50+ budget categories to quickly locate specific programs
+- Purpose: Improves usability when dealing with large number of budget categories
+- Trigger: User types in search field
+- Progression: Type query → Filter results in real-time → Show match count → Clear search to reset
+- Success criteria: Search returns relevant results instantly and shows clear feedback on number of matches
+
+**Budget Overview Dashboard**
+- Functionality: High-level summary cards showing total allocated budget, total used, remaining budget, and category count
+- Purpose: Provides executive overview of entire HCGA 2026 budget status at a glance
+- Trigger: Automatically displays at top of dashboard
+- Progression: Page loads → Calculate totals → Display summary cards → Update on any submission
+- Success criteria: Accurate real-time totals across all 50+ categories with clear visual hierarchy
 
 **Submission Creation**
 - Functionality: Create new budget submissions with category selection, amount, description, and automatic date assignment

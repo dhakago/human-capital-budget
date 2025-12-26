@@ -38,9 +38,26 @@ export function SubmissionDialog({ open, onOpenChange, categories, onSubmit, get
     }
 
     const remaining = getRemainingBudget(categoryId)
+    
     if (numAmount > remaining) {
-      toast.error(`Anggaran tidak mencukupi. Sisa: ${formatCurrency(remaining)}`)
+      const selectedCat = categories.find(c => c.id === categoryId)
+      toast.error(
+        `Anggaran tidak mencukupi untuk ${selectedCat?.name}. Sisa: ${formatCurrency(remaining)}`,
+        {
+          description: `Anda mencoba mengajukan ${formatCurrency(numAmount)}, tetapi hanya tersisa ${formatCurrency(remaining)}`
+        }
+      )
       return
+    }
+
+    const usageAfter = ((getRemainingBudget(categoryId) - numAmount) / selectedCategory!.monthlyBudget) * 100
+    if (usageAfter < 20 && remaining > 0) {
+      toast.warning(
+        'Peringatan: Anggaran akan hampir habis',
+        {
+          description: `Setelah pengajuan ini, sisa anggaran hanya ${formatCurrency(remaining - numAmount)}`
+        }
+      )
     }
 
     setIsSubmitting(true)
@@ -52,7 +69,9 @@ export function SubmissionDialog({ open, onOpenChange, categories, onSubmit, get
       setAmount('')
       setDescription('')
       onOpenChange(false)
-      toast.success('Pengajuan berhasil dibuat')
+      toast.success('Pengajuan berhasil dibuat', {
+        description: `${formatCurrency(numAmount)} telah dikurangkan dari ${selectedCategory?.name}`
+      })
     }
   }
 

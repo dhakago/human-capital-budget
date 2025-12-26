@@ -1,10 +1,12 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Submission } from '@/lib/budget-utils'
 import { formatCurrency } from '@/lib/budget-utils'
-import { ListBullets } from '@phosphor-icons/react'
+import { ListBullets, Download } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 
 interface SubmissionsTableProps {
   submissions: Submission[]
@@ -34,6 +36,36 @@ export function SubmissionsTable({ submissions, getCategoryName }: SubmissionsTa
     }
   }
 
+  const handleExport = () => {
+    const headers = ['Tanggal', 'Kategori', 'Deskripsi', 'Jumlah (IDR)', 'Status']
+    const rows = submissions.map(sub => [
+      formatDate(sub.date),
+      getCategoryName(sub.categoryId),
+      sub.description,
+      sub.amount.toString(),
+      sub.status === 'approved' ? 'Disetujui' : sub.status === 'pending' ? 'Pending' : 'Ditolak'
+    ])
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n')
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `pengajuan_budget_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    toast.success('Data berhasil diekspor', {
+      description: `${submissions.length} pengajuan telah diunduh`
+    })
+  }
+
   if (submissions.length === 0) {
     return (
       <Card>
@@ -57,10 +89,23 @@ export function SubmissionsTable({ submissions, getCategoryName }: SubmissionsTa
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-display flex items-center gap-2">
-          <ListBullets size={24} weight="duotone" />
-          Riwayat Pengajuan
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="font-display flex items-center gap-2">
+            <ListBullets size={24} weight="duotone" />
+            Riwayat Pengajuan
+          </CardTitle>
+          {submissions.length > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleExport}
+              className="gap-2"
+            >
+              <Download size={16} weight="bold" />
+              Export CSV
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="rounded-lg border border-border overflow-hidden">
