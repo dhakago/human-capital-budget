@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Submission } from '@/lib/budget-utils'
-import { formatCurrency } from '@/lib/budget-utils'
+import { formatCurrency, formatMonth } from '@/lib/budget-utils'
 import { ListBullets, Download } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
@@ -37,12 +37,13 @@ export function SubmissionsTable({ submissions, getCategoryName }: SubmissionsTa
   }
 
   const handleExport = () => {
-    const headers = ['Tanggal', 'Kategori', 'Deskripsi', 'Jumlah (IDR)', 'Status']
+    const headers = ['Tanggal', 'Kategori', 'Deskripsi', 'Jumlah (IDR)', 'Estimasi Pelaksanaan', 'Status']
     const rows = submissions.map(sub => [
       formatDate(sub.date),
       getCategoryName(sub.categoryId),
       sub.description,
       sub.amount.toString(),
+      formatMonth(sub.executionMonth),
       sub.status === 'approved' ? 'Disetujui' : sub.status === 'pending' ? 'Pending' : 'Ditolak'
     ])
     
@@ -115,6 +116,7 @@ export function SubmissionsTable({ submissions, getCategoryName }: SubmissionsTa
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Kategori</TableHead>
                 <TableHead>Deskripsi</TableHead>
+                <TableHead>Estimasi Pelaksanaan</TableHead>
                 <TableHead className="text-right">Jumlah</TableHead>
                 <TableHead className="text-center">Status</TableHead>
               </TableRow>
@@ -136,6 +138,11 @@ export function SubmissionsTable({ submissions, getCategoryName }: SubmissionsTa
                   </TableCell>
                   <TableCell className="max-w-xs truncate">
                     {submission.description}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="font-medium">
+                      {formatMonth(submission.executionMonth)}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right font-display font-semibold tabular-nums">
                     {formatCurrency(submission.amount)}

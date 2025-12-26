@@ -6,14 +6,14 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { BudgetCategory } from '@/lib/budget-utils'
-import { formatCurrency } from '@/lib/budget-utils'
+import { formatCurrency, formatMonth, getMonthOptions } from '@/lib/budget-utils'
 import { toast } from 'sonner'
 
 interface SubmissionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   categories: BudgetCategory[]
-  onSubmit: (categoryId: string, subItemId: string | undefined, amount: number, description: string) => Promise<boolean>
+  onSubmit: (categoryId: string, subItemId: string | undefined, amount: number, description: string, executionMonth: string) => Promise<boolean>
   getRemainingBudget: (categoryId: string, subItemId?: string) => number
   preSelectedCategory?: string
   preSelectedSubItem?: string
@@ -32,6 +32,7 @@ export function SubmissionDialog({
   const [subItemId, setSubItemId] = useState('')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
+  const [executionMonth, setExecutionMonth] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export function SubmissionDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!categoryId || !amount || !description) {
+    if (!categoryId || !amount || !description || !executionMonth) {
       toast.error('Mohon lengkapi semua field')
       return
     }
@@ -89,7 +90,7 @@ export function SubmissionDialog({
     }
 
     setIsSubmitting(true)
-    const success = await onSubmit(categoryId, subItemId, numAmount, description)
+    const success = await onSubmit(categoryId, subItemId, numAmount, description, executionMonth)
     setIsSubmitting(false)
 
     if (success) {
@@ -97,6 +98,7 @@ export function SubmissionDialog({
       setSubItemId('')
       setAmount('')
       setDescription('')
+      setExecutionMonth('')
       onOpenChange(false)
       toast.success('Pengajuan berhasil dibuat', {
         description: `${formatCurrency(numAmount)} telah dikurangkan dari ${selectedSub?.name}`
@@ -106,6 +108,7 @@ export function SubmissionDialog({
 
   const selectedCategory = categories.find(c => c.id === categoryId)
   const remainingBudget = categoryId && subItemId ? getRemainingBudget(categoryId, subItemId) : 0
+  const monthOptions = getMonthOptions()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -177,6 +180,22 @@ export function SubmissionDialog({
                 min="0"
                 step="1000"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="execution-month">Estimasi Pelaksanaan</Label>
+              <Select value={executionMonth} onValueChange={setExecutionMonth}>
+                <SelectTrigger id="execution-month">
+                  <SelectValue placeholder="Pilih bulan pelaksanaan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map(month => (
+                    <SelectItem key={month} value={month}>
+                      {formatMonth(month)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

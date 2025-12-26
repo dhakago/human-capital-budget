@@ -12,7 +12,8 @@ import { BudgetAlerts } from '@/components/BudgetAlerts'
 import { SubmissionsTable } from '@/components/SubmissionsTable'
 import { CategoryDialog } from '@/components/CategoryDialog'
 import { CategoryDetailView } from '@/components/CategoryDetailView'
-import { Plus, Calendar, ChartBar, ListBullets, ArrowLeft, ArrowRight, MagnifyingGlass, FolderOpen, Trash, Pencil, Lock, LockOpen } from '@phosphor-icons/react'
+import { YearlyView } from '@/components/YearlyView'
+import { Plus, Calendar, ChartBar, ListBullets, ArrowLeft, ArrowRight, MagnifyingGlass, Trash, Pencil, Lock, LockOpen, ChartLine } from '@phosphor-icons/react'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
 import { 
@@ -44,6 +45,7 @@ function App() {
   const [isLocked, setIsLocked] = useKV<boolean>('budget-locked', false)
   
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [dialogOpen, setDialogOpen] = useState(false)
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -132,7 +134,7 @@ function App() {
     return submissions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [currentMonthData])
 
-  const handleSubmission = async (categoryId: string, subItemId: string | undefined, amount: number, description: string): Promise<boolean> => {
+  const handleSubmission = async (categoryId: string, subItemId: string | undefined, amount: number, description: string, executionMonth: string): Promise<boolean> => {
     const cats = categories || []
     
     const newSubmission: Submission = {
@@ -142,6 +144,7 @@ function App() {
       amount,
       description,
       date: new Date().toISOString(),
+      executionMonth,
       status: 'approved'
     }
 
@@ -433,6 +436,10 @@ function App() {
                 <ChartBar size={16} weight="duotone" />
                 Dashboard
               </TabsTrigger>
+              <TabsTrigger value="yearly" className="gap-2">
+                <ChartLine size={16} weight="duotone" />
+                Tahunan
+              </TabsTrigger>
               <TabsTrigger value="submissions" className="gap-2">
                 <ListBullets size={16} weight="duotone" />
                 Pengajuan
@@ -544,6 +551,46 @@ function App() {
                   </p>
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="yearly">
+              <div className="mb-6">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setSelectedYear(y => y - 1)}
+                  >
+                    <ArrowLeft size={16} />
+                  </Button>
+                  <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+                    <SelectTrigger className="w-[200px]">
+                      <Calendar size={16} className="mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[2024, 2025, 2026, 2027, 2028].map(year => (
+                        <SelectItem key={year} value={String(year)}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setSelectedYear(y => y + 1)}
+                  >
+                    <ArrowRight size={16} />
+                  </Button>
+                </div>
+              </div>
+
+              <YearlyView
+                year={selectedYear}
+                categories={categories || []}
+                monthlyData={monthlyData || {}}
+              />
             </TabsContent>
 
             <TabsContent value="submissions">

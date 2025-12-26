@@ -48,11 +48,11 @@ A comprehensive budgeting dashboard system for Human Capital programs (HCGA 2026
 - Success criteria: Accurate real-time totals across all categories with clear visual hierarchy
 
 **Submission Creation**
-- Functionality: Create new budget submissions by selecting a category, then a sub-item, entering amount and description
-- Purpose: Allows users to request budget allocation from specific sub-items and automatically deducts from available budgets
+- Functionality: Create new budget submissions by selecting a category, then a sub-item, entering amount, description, and estimated execution month
+- Purpose: Allows users to request budget allocation from specific sub-items with planning for when the program will be executed, automatically deducts from available budgets
 - Trigger: User clicks "Buat Pengajuan" button or "Buat Pengajuan" on a specific sub-item
-- Progression: Click button → Dialog opens → Select category → Select sub-item → Fill amount and description → Submit → Budget automatically deducted from sub-item and category → Confirmation shown
-- Success criteria: Submission is created, sub-item and category budgets are updated in real-time, and user sees updated balances immediately
+- Progression: Click button → Dialog opens → Select category → Select sub-item → Fill amount → Select execution month → Fill description → Submit → Budget automatically deducted from sub-item and category → Confirmation shown
+- Success criteria: Submission is created with execution month, sub-item and category budgets are updated in real-time, and user sees updated balances immediately
 
 **Budget Status Notifications**
 - Functionality: Display warning alerts when budgets reach 80% threshold and critical alerts when exceeded
@@ -69,11 +69,18 @@ A comprehensive budgeting dashboard system for Human Capital programs (HCGA 2026
 - Success criteria: Users can navigate between months and see accurate historical budget data
 
 **Submission History**
-- Functionality: Comprehensive list of all submissions with filtering, sorting, and status tracking
-- Purpose: Provides audit trail and helps users understand spending patterns
+- Functionality: Comprehensive list of all submissions with filtering, sorting, status tracking, and execution month display
+- Purpose: Provides audit trail and helps users understand spending patterns and when programs are planned to be executed
 - Trigger: Navigate to submissions view
-- Progression: Click submissions tab → Table loads → Apply filters/sort → View details → Export if needed
-- Success criteria: All submissions are visible with accurate timestamps, amounts, and categories
+- Progression: Click submissions tab → Table loads → Apply filters/sort → View details including execution month → Export if needed
+- Success criteria: All submissions are visible with accurate timestamps, amounts, categories, and execution months
+
+**Yearly Budget View**
+- Functionality: Aggregated view of all 12 months in a year showing total allocated, used, and remaining budget for each month with submission counts
+- Purpose: Provides annual overview to understand budget utilization patterns across the year and identify when programs are concentrated
+- Trigger: User clicks "Tahunan" tab
+- Progression: Click yearly tab → Select year → View displays 12 month cards → Each card shows allocation, usage percentage, submission count → Can navigate between years
+- Success criteria: Users can see complete yearly overview with accurate totals for each month and visual indicators of budget health
 
 ## Edge Case Handling
 
@@ -142,18 +149,19 @@ Animations should feel precise and purposeful, like a well-tuned financial instr
   - Alert (for budget threshold warnings)
   - AlertDialog (for category deletion confirmation)
   - Progress (visual budget usage indicators at category and sub-item level)
-  - Select (month/category/sub-item choosers)
+  - Select (month/category/sub-item choosers and execution month selector)
   - Input (amount, description, category name, sub-item name fields)
   - Label (form field labels)
   - Table (submission history)
-  - Badge (status indicators for submissions and budget health)
-  - Tabs (switching between dashboard/submissions views)
+  - Badge (status indicators for submissions, budget health, and execution months)
+  - Tabs (switching between dashboard/yearly/submissions views)
   - Separator (visual section breaks)
 
 - **Customizations**: 
   - Custom budget card component with integrated progress bar, status indicators, and hover actions for edit/delete
   - Custom category detail view component showing hierarchical sub-item structure
   - Custom category dialog for adding/editing categories with dynamic sub-item management
+  - Custom yearly view component with 12-month grid showing budget allocation and usage patterns
   - Custom currency input with automatic formatting
   - Custom alert variant for 80% threshold warnings (distinct from 100% exceeded)
   - Custom metric display component for large financial numbers
@@ -168,16 +176,17 @@ Animations should feel precise and purposeful, like a well-tuned financial instr
   - Plus (add submission, add category, add sub-item)
   - Pencil (edit category)
   - Trash (delete category)
-  - ArrowLeft (back to main categories, navigate months)
-  - ArrowRight (navigate months)
+  - ArrowLeft (back to main categories, navigate months/years)
+  - ArrowRight (navigate months/years)
   - FolderOpen (category detail view)
   - Wallet (budget categories)
   - TrendUp (budget increase)
   - TrendDown (budget decrease)  
   - Warning (threshold alerts)
-  - Calendar (month selector)
+  - Calendar (month/year selector)
   - ListBullets (submission history)
   - ChartBar (dashboard view)
+  - ChartLine (yearly view)
   - MagnifyingGlass (search)
 
 - **Spacing**: 

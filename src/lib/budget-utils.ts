@@ -19,6 +19,7 @@ export interface Submission {
   amount: number
   description: string
   date: string
+  executionMonth: string
   status: 'approved' | 'pending' | 'rejected'
 }
 
@@ -91,6 +92,15 @@ export const getMonthOptions = (): string[] => {
   }
   
   return options
+}
+
+export const getYearMonths = (year: number): string[] => {
+  const months: string[] = []
+  for (let i = 1; i <= 12; i++) {
+    const month = String(i).padStart(2, '0')
+    months.push(`${year}-${month}`)
+  }
+  return months
 }
 
 export const calculateUsage = (allocated: number, used: number): number => {
