@@ -13,7 +13,7 @@ import { SubmissionsTable } from '@/components/SubmissionsTable'
 import { CategoryDialog } from '@/components/CategoryDialog'
 import { CategoryDetailView } from '@/components/CategoryDetailView'
 import { YearlyView } from '@/components/YearlyView'
-import { Plus, Calendar, ChartBar, ListBullets, ArrowLeft, ArrowRight, MagnifyingGlass, Trash, Pencil, Lock, LockOpen, ChartLine } from '@phosphor-icons/react'
+import { Plus, Calendar, ChartBar, ListBullets, ArrowLeft, ArrowRight, MagnifyingGlass, Trash, Pencil, Lock, LockOpen, ChartLine, Gear } from '@phosphor-icons/react'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
 import { 
@@ -37,6 +37,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 function App() {
   const [categories, setCategories] = useKV<BudgetCategory[]>('budget-categories', [])
@@ -437,24 +443,32 @@ function App() {
                 </div>
               )}
 
-              {!selectedCategoryId && !isLocked && (
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    setEditingCategory(undefined)
-                    setCategoryDialogOpen(true)
-                  }} 
-                  className="gap-2"
-                >
-                  <Plus size={16} weight="bold" />
-                  Tambah Kategori
-                </Button>
-              )}
-              {!selectedCategoryId && viewMode === 'monthly' && (
-                <Button onClick={() => setDialogOpen(true)} className="gap-2">
-                  <Plus size={16} weight="bold" />
-                  Buat Pengajuan
-                </Button>
+              {!selectedCategoryId && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="gap-2">
+                      <Gear size={18} weight="bold" />
+                      Menu
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    {viewMode === 'monthly' && (
+                      <DropdownMenuItem onClick={() => setDialogOpen(true)}>
+                        <Plus size={16} weight="bold" className="mr-2" />
+                        Buat Pengajuan
+                      </DropdownMenuItem>
+                    )}
+                    {!isLocked && (
+                      <DropdownMenuItem onClick={() => {
+                        setEditingCategory(undefined)
+                        setCategoryDialogOpen(true)
+                      }}>
+                        <Plus size={16} weight="bold" className="mr-2" />
+                        Tambah Kategori
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
