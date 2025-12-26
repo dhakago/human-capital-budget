@@ -46,6 +46,7 @@ function App() {
   
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('monthly')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -330,7 +331,7 @@ function App() {
               <h1 className="font-display text-3xl font-bold">Budget HCGA 2026</h1>
               <p className="text-muted-foreground mt-1">Human Capital & General Affairs</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Button
                 variant={isLocked ? "destructive" : "outline"}
                 size="sm"
@@ -352,53 +353,104 @@ function App() {
                   </>
                 )}
               </Button>
+              
               <div className="flex items-center gap-2">
                 <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => navigateMonth('prev')}
-                  disabled={monthOptions.indexOf(selectedMonth) === 0}
+                  variant={viewMode === 'monthly' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('monthly')}
+                  className="gap-2"
                 >
-                  <ArrowLeft size={16} />
+                  <Calendar size={16} weight="duotone" />
+                  Bulanan
                 </Button>
-                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                  <SelectTrigger className="w-[200px]">
-                    <Calendar size={16} className="mr-2" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {monthOptions.map(month => (
-                      <SelectItem key={month} value={month}>
-                        {formatMonth(month)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
                 <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => navigateMonth('next')}
-                  disabled={monthOptions.indexOf(selectedMonth) === monthOptions.length - 1}
+                  variant={viewMode === 'yearly' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('yearly')}
+                  className="gap-2"
                 >
-                  <ArrowRight size={16} />
+                  <ChartLine size={16} weight="duotone" />
+                  Tahunan
                 </Button>
               </div>
-              {!selectedCategoryId && !isLocked && (
-                <>
-                  <Button 
+
+              {viewMode === 'monthly' ? (
+                <div className="flex items-center gap-2">
+                  <Button
                     variant="outline"
-                    onClick={() => {
-                      setEditingCategory(undefined)
-                      setCategoryDialogOpen(true)
-                    }} 
-                    className="gap-2"
+                    size="icon"
+                    onClick={() => navigateMonth('prev')}
+                    disabled={monthOptions.indexOf(selectedMonth) === 0}
                   >
-                    <Plus size={16} weight="bold" />
-                    Tambah Kategori
+                    <ArrowLeft size={16} />
                   </Button>
-                </>
+                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {monthOptions.map(month => (
+                        <SelectItem key={month} value={month}>
+                          {formatMonth(month)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => navigateMonth('next')}
+                    disabled={monthOptions.indexOf(selectedMonth) === monthOptions.length - 1}
+                  >
+                    <ArrowRight size={16} />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setSelectedYear(y => y - 1)}
+                  >
+                    <ArrowLeft size={16} />
+                  </Button>
+                  <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[2024, 2025, 2026, 2027, 2028].map(year => (
+                        <SelectItem key={year} value={String(year)}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setSelectedYear(y => y + 1)}
+                  >
+                    <ArrowRight size={16} />
+                  </Button>
+                </div>
               )}
-              {!selectedCategoryId && (
+
+              {!selectedCategoryId && !isLocked && (
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setEditingCategory(undefined)
+                    setCategoryDialogOpen(true)
+                  }} 
+                  className="gap-2"
+                >
+                  <Plus size={16} weight="bold" />
+                  Tambah Kategori
+                </Button>
+              )}
+              {!selectedCategoryId && viewMode === 'monthly' && (
                 <Button onClick={() => setDialogOpen(true)} className="gap-2">
                   <Plus size={16} weight="bold" />
                   Buat Pengajuan
@@ -429,16 +481,18 @@ function App() {
             onAddSubmission={handleAddSubmissionFromDetail}
             isLocked={isLocked}
           />
+        ) : viewMode === 'yearly' ? (
+          <YearlyView
+            year={selectedYear}
+            categories={categories || []}
+            monthlyData={monthlyData || {}}
+          />
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList>
               <TabsTrigger value="dashboard" className="gap-2">
                 <ChartBar size={16} weight="duotone" />
                 Dashboard
-              </TabsTrigger>
-              <TabsTrigger value="yearly" className="gap-2">
-                <ChartLine size={16} weight="duotone" />
-                Tahunan
               </TabsTrigger>
               <TabsTrigger value="submissions" className="gap-2">
                 <ListBullets size={16} weight="duotone" />
@@ -551,46 +605,6 @@ function App() {
                   </p>
                 </div>
               )}
-            </TabsContent>
-
-            <TabsContent value="yearly">
-              <div className="mb-6">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setSelectedYear(y => y - 1)}
-                  >
-                    <ArrowLeft size={16} />
-                  </Button>
-                  <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
-                    <SelectTrigger className="w-[200px]">
-                      <Calendar size={16} className="mr-2" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[2024, 2025, 2026, 2027, 2028].map(year => (
-                        <SelectItem key={year} value={String(year)}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setSelectedYear(y => y + 1)}
-                  >
-                    <ArrowRight size={16} />
-                  </Button>
-                </div>
-              </div>
-
-              <YearlyView
-                year={selectedYear}
-                categories={categories || []}
-                monthlyData={monthlyData || {}}
-              />
             </TabsContent>
 
             <TabsContent value="submissions">
