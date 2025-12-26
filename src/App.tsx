@@ -141,7 +141,7 @@ function App() {
     return submissions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [currentMonthData])
 
-  const handleSubmission = async (categoryId: string, subItemId: string | undefined, amount: number, description: string, executionMonth: string): Promise<boolean> => {
+  const handleSubmission = async (categoryId: string, subItemId: string | undefined, amount: number, description: string, executionMonth: string, evidence: { fileName: string; fileSize: number; fileType: string; uploadDate: string }): Promise<boolean> => {
     const cats = categories || []
     
     const newSubmission: Submission = {
@@ -152,7 +152,8 @@ function App() {
       description,
       date: new Date().toISOString(),
       executionMonth,
-      status: 'approved'
+      status: 'approved',
+      evidence
     }
 
     setMonthlyData((current) => {

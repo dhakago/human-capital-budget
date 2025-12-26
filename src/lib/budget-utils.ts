@@ -21,6 +21,12 @@ export interface Submission {
   date: string
   executionMonth: string
   status: 'approved' | 'pending' | 'rejected'
+  evidence: {
+    fileName: string
+    fileSize: number
+    fileType: string
+    uploadDate: string
+  }
 }
 
 export interface MonthlyBudgetData {

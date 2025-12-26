@@ -4,9 +4,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Submission } from '@/lib/budget-utils'
 import { formatCurrency, formatMonth } from '@/lib/budget-utils'
-import { ListBullets, Download } from '@phosphor-icons/react'
+import { ListBullets, Download, File } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 interface SubmissionsTableProps {
   submissions: Submission[]
@@ -37,14 +43,15 @@ export function SubmissionsTable({ submissions, getCategoryName }: SubmissionsTa
   }
 
   const handleExport = () => {
-    const headers = ['Tanggal', 'Kategori', 'Deskripsi', 'Jumlah (IDR)', 'Estimasi Pelaksanaan', 'Status']
+    const headers = ['Tanggal', 'Kategori', 'Deskripsi', 'Jumlah (IDR)', 'Estimasi Pelaksanaan', 'Status', 'Bukti']
     const rows = submissions.map(sub => [
       formatDate(sub.date),
       getCategoryName(sub.categoryId),
       sub.description,
       sub.amount.toString(),
       formatMonth(sub.executionMonth),
-      sub.status === 'approved' ? 'Disetujui' : sub.status === 'pending' ? 'Pending' : 'Ditolak'
+      sub.status === 'approved' ? 'Disetujui' : sub.status === 'pending' ? 'Pending' : 'Ditolak',
+      sub.evidence.fileName
     ])
     
     const csvContent = [
@@ -118,6 +125,7 @@ export function SubmissionsTable({ submissions, getCategoryName }: SubmissionsTa
                 <TableHead>Deskripsi</TableHead>
                 <TableHead>Estimasi Pelaksanaan</TableHead>
                 <TableHead className="text-right">Jumlah</TableHead>
+                <TableHead className="text-center">Bukti</TableHead>
                 <TableHead className="text-center">Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -146,6 +154,29 @@ export function SubmissionsTable({ submissions, getCategoryName }: SubmissionsTa
                   </TableCell>
                   <TableCell className="text-right font-display font-semibold tabular-nums">
                     {formatCurrency(submission.amount)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" className="gap-2">
+                            <File size={16} weight="duotone" className="text-primary" />
+                            <span className="text-xs max-w-[100px] truncate">{submission.evidence.fileName}</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="space-y-1">
+                            <p className="font-medium">{submission.evidence.fileName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Ukuran: {(submission.evidence.fileSize / 1024).toFixed(2)} KB
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Tipe: {submission.evidence.fileType}
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   <TableCell className="text-center">
                     {getStatusBadge(submission.status)}

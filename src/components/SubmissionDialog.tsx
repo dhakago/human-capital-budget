@@ -8,12 +8,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { BudgetCategory } from '@/lib/budget-utils'
 import { formatCurrency, formatMonth, getMonthOptions } from '@/lib/budget-utils'
 import { toast } from 'sonner'
+import { UploadSimple, File } from '@phosphor-icons/react'
 
 interface SubmissionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   categories: BudgetCategory[]
-  onSubmit: (categoryId: string, subItemId: string | undefined, amount: number, description: string, executionMonth: string) => Promise<boolean>
+  onSubmit: (categoryId: string, subItemId: string | undefined, amount: number, description: string, executionMonth: string, evidence: { fileName: string; fileSize: number; fileType: string; uploadDate: string }) => Promise<boolean>
   getRemainingBudget: (categoryId: string, subItemId?: string) => number
   preSelectedCategory?: string
   preSelectedSubItem?: string
@@ -33,6 +34,7 @@ export function SubmissionDialog({
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
   const [executionMonth, setExecutionMonth] = useState('')
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
@@ -54,6 +56,11 @@ export function SubmissionDialog({
 
     if (!subItemId) {
       toast.error('Mohon pilih sub-item')
+      return
+    }
+
+    if (!evidenceFile) {
+      toast.error('Mohon lampirkan bukti/evidence')
       return
     }
 
@@ -89,8 +96,15 @@ export function SubmissionDialog({
       )
     }
 
+    const evidence = {
+      fileName: evidenceFile.name,
+      fileSize: evidenceFile.size,
+      fileType: evidenceFile.type,
+      uploadDate: new Date().toISOString()
+    }
+
     setIsSubmitting(true)
-    const success = await onSubmit(categoryId, subItemId, numAmount, description, executionMonth)
+    const success = await onSubmit(categoryId, subItemId, numAmount, description, executionMonth, evidence)
     setIsSubmitting(false)
 
     if (success) {
@@ -99,10 +113,25 @@ export function SubmissionDialog({
       setAmount('')
       setDescription('')
       setExecutionMonth('')
+      setEvidenceFile(null)
       onOpenChange(false)
       toast.success('Pengajuan berhasil dibuat', {
         description: `${formatCurrency(numAmount)} telah dikurangkan dari ${selectedSub?.name}`
       })
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const maxSize = 10 * 1024 * 1024
+      if (file.size > maxSize) {
+        toast.error('Ukuran file terlalu besar', {
+          description: 'Maksimal ukuran file adalah 10MB'
+        })
+        return
+      }
+      setEvidenceFile(file)
     }
   }
 
@@ -207,6 +236,45 @@ export function SubmissionDialog({
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="evidence">Bukti/Evidence <span className="text-destructive">*</span></Label>
+              <div className="relative">
+                <input
+                  id="evidence"
+                  type="file"
+                  onChange={handleFileChange}
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-start gap-2 h-auto py-3"
+                  onClick={() => document.getElementById('evidence')?.click()}
+                >
+                  {evidenceFile ? (
+                    <>
+                      <File size={20} weight="duotone" className="text-primary" />
+                      <div className="flex-1 text-left overflow-hidden">
+                        <p className="text-sm font-medium truncate">{evidenceFile.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(evidenceFile.size / 1024).toFixed(2)} KB
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <UploadSimple size={20} weight="duotone" />
+                      <span className="text-muted-foreground">Pilih file bukti...</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Format: PDF, Gambar, Word, Excel (Max. 10MB)
+              </p>
             </div>
           </div>
           <DialogFooter>
