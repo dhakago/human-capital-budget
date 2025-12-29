@@ -31,15 +31,15 @@ export function BudgetCard({ categoryName, allocated, used, submissionCount, ico
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className="hover:shadow-lg transition-shadow duration-300">
+      <Card className="hover:shadow-lg transition-shadow duration-300 h-full">
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="p-2 rounded-lg bg-primary/10 shrink-0">
                 <Wallet className="text-primary" size={20} weight="duotone" />
               </div>
-              <div>
-                <CardTitle className="text-lg">{categoryName}</CardTitle>
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-lg truncate">{categoryName}</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
                   {submissionCount} pengajuan
                 </p>
@@ -47,7 +47,10 @@ export function BudgetCard({ categoryName, allocated, used, submissionCount, ico
             </div>
             <Badge 
               variant={statusColor === 'destructive' ? 'destructive' : statusColor === 'warning' ? 'secondary' : 'default'}
-              className={statusColor === 'success' ? 'bg-success text-success-foreground' : ''}
+              className={cn(
+                "shrink-0",
+                statusColor === 'success' ? 'bg-success text-success-foreground' : ''
+              )}
             >
               {percentage}%
             </Badge>
