@@ -56,12 +56,8 @@ export interface BudgetAlert {
 }
 
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
+  const formatted = Math.abs(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `Rp ${amount < 0 ? '-' : ''}${formatted}`
 }
 
 export const formatMonth = (monthStr: string): string => {
