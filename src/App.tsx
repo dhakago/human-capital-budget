@@ -446,114 +446,116 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-card">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="font-display text-3xl font-bold">Budget HCGA 2026</h1>
-              <p className="text-muted-foreground mt-1">Human Capital & General Affairs</p>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Pilih View" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="program">
-                    <div className="flex items-center gap-2">
-                      <Calendar size={16} weight="duotone" />
-                      Program
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="yearly">
-                    <div className="flex items-center gap-2">
-                      <ChartLine size={16} weight="duotone" />
-                      Tahunan
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+      {!selectedCategoryId && (
+        <div className="border-b border-border bg-card">
+          <div className="max-w-7xl mx-auto px-6 py-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h1 className="font-display text-3xl font-bold">Budget HCGA 2026</h1>
+                <p className="text-muted-foreground mt-1">Human Capital & General Affairs</p>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Pilih View" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="program">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={16} weight="duotone" />
+                        Program
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="yearly">
+                      <div className="flex items-center gap-2">
+                        <ChartLine size={16} weight="duotone" />
+                        Tahunan
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
 
-              {!selectedCategoryId && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button className="gap-2">
-                      <Gear size={18} weight="bold" />
-                      Menu
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64">
-                    {viewMode === 'program' && (
+                {!selectedCategoryId && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button className="gap-2">
+                        <Gear size={18} weight="bold" />
+                        Menu
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64">
+                      {viewMode === 'program' && (
+                        <DropdownMenuItem
+                          disabled={!canEdit}
+                          onClick={() => {
+                            if (!canEdit) {
+                              toast.error('Hanya superadmin yang dapat membuat pengajuan')
+                              return
+                            }
+                            setDialogOpen(true)
+                          }}
+                        >
+                          <Plus size={16} weight="bold" className="mr-2" />
+                          Buat Pengajuan
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem
                         disabled={!canEdit}
                         onClick={() => {
                           if (!canEdit) {
-                            toast.error('Hanya superadmin yang dapat membuat pengajuan')
+                            toast.error('Hanya superadmin yang dapat menambah kategori')
                             return
                           }
-                          setDialogOpen(true)
+                          setEditingCategory(undefined)
+                          setCategoryDialogOpen(true)
                         }}
                       >
                         <Plus size={16} weight="bold" className="mr-2" />
-                        Buat Pengajuan
+                        Tambah Kategori
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          if (isSuperadmin) {
+                            logout()
+                            toast.success('Logout Superadmin')
+                          } else {
+                            setAuthDialogOpen(true)
+                          }
+                        }}
+                      >
+                        <ShieldCheck size={16} weight="bold" className="mr-2" />
+                        {isSuperadmin ? 'Logout Superadmin' : 'Login Superadmin'}
+                        {isSuperadmin && <SignOut size={14} className="ml-2" />}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                {!selectedCategoryId && (
+                  <Button
+                    variant={isLocked ? "destructive" : "outline"}
+                    size="icon"
+                    disabled={!isSuperadmin}
+                    onClick={() => {
+                      if (!isSuperadmin) {
+                        toast.error('Hanya superadmin yang dapat mengunci anggaran')
+                        return
+                      }
+                      setIsLocked((current) => !current)
+                      toast.success(isLocked ? 'Anggaran dibuka untuk editing' : 'Anggaran dikunci')
+                    }}
+                  >
+                    {isLocked ? (
+                      <Lock size={16} weight="bold" />
+                    ) : (
+                      <LockOpen size={16} weight="bold" />
                     )}
-                    <DropdownMenuItem
-                      disabled={!canEdit}
-                      onClick={() => {
-                        if (!canEdit) {
-                          toast.error('Hanya superadmin yang dapat menambah kategori')
-                          return
-                        }
-                        setEditingCategory(undefined)
-                        setCategoryDialogOpen(true)
-                      }}
-                    >
-                      <Plus size={16} weight="bold" className="mr-2" />
-                      Tambah Kategori
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        if (isSuperadmin) {
-                          logout()
-                          toast.success('Logout Superadmin')
-                        } else {
-                          setAuthDialogOpen(true)
-                        }
-                      }}
-                    >
-                      <ShieldCheck size={16} weight="bold" className="mr-2" />
-                      {isSuperadmin ? 'Logout Superadmin' : 'Login Superadmin'}
-                      {isSuperadmin && <SignOut size={14} className="ml-2" />}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              {!selectedCategoryId && (
-                <Button
-                  variant={isLocked ? "destructive" : "outline"}
-                  size="icon"
-                  disabled={!isSuperadmin}
-                  onClick={() => {
-                    if (!isSuperadmin) {
-                      toast.error('Hanya superadmin yang dapat mengunci anggaran')
-                      return
-                    }
-                    setIsLocked((current) => !current)
-                    toast.success(isLocked ? 'Anggaran dibuka untuk editing' : 'Anggaran dikunci')
-                  }}
-                >
-                  {isLocked ? (
-                    <Lock size={16} weight="bold" />
-                  ) : (
-                    <LockOpen size={16} weight="bold" />
-                  )}
-                </Button>
-              )}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {alerts.length > 0 && !selectedCategoryId && (
