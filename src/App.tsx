@@ -1,7 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, FormEvent } from 'react'
 import { useKV } from '@github/spark/hooks'
+import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { BudgetCard } from '@/components/BudgetCard'
@@ -13,7 +15,7 @@ import { SubmissionsTable } from '@/components/SubmissionsTable'
 import { CategoryDialog } from '@/components/CategoryDialog'
 import { CategoryDetailView } from '@/components/CategoryDetailView'
 import { YearlyView } from '@/components/YearlyView'
-import { Plus, Calendar, ChartBar, ListBullets, ArrowLeft, ArrowRight, MagnifyingGlass, Trash, Pencil, Lock, LockOpen, ChartLine, Gear } from '@phosphor-icons/react'
+import { Plus, Calendar, ChartBar, ListBullets, ArrowLeft, ArrowRight, MagnifyingGlass, Trash, Pencil, Lock, LockOpen, ChartLine, Gear, ShieldCheck, SignOut } from '@phosphor-icons/react'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
 import { 
@@ -43,8 +45,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 function App() {
+  const { isSuperadmin, login, logout } = useAuth()
   const [categories, setCategories] = useKV<BudgetCategory[]>('budget-categories', [])
   const [monthlyData, setMonthlyData] = useKV<{ [month: string]: MonthlyBudgetData }>('monthly-budget-data', {})
   const [dismissedAlerts, setDismissedAlerts] = useKV<string[]>('dismissed-alerts', [])
@@ -52,7 +63,7 @@ function App() {
   
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-  const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('monthly')
+  const [viewMode, setViewMode] = useState<'program' | 'yearly'>('program')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -63,14 +74,78 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'healthy' | 'warning' | 'exceeded'>('all')
+  const [authDialogOpen, setAuthDialogOpen] = useState(false)
+  const [superadminPassword, setSuperadminPassword] = useState('')
+  const [isAuthSubmitting, setIsAuthSubmitting] = useState(false)
 
   useEffect(() => {
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('budget-categories-v1') : null
+    const fallbackStored = typeof window !== 'undefined' ? window.localStorage.getItem('budget-categories') : null
+    const toParse = stored || fallbackStored
+    if (toParse) {
+      try {
+        const parsed = JSON.parse(toParse)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCategories(parsed)
+          return
+        }
+      } catch {}
+    }
     if (!categories || categories.length === 0) {
       setCategories(BUDGET_CATEGORIES_2026)
     }
   }, [])
 
+  useEffect(() => {
+    try {
+      const cats = categories || []
+      if (typeof window !== 'undefined') {
+        const serialized = JSON.stringify(cats)
+        window.localStorage.setItem('budget-categories-v1', serialized)
+        window.localStorage.setItem('budget-categories', serialized)
+      }
+    } catch {}
+  }, [categories])
+
+  useEffect(() => {
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('monthly-budget-data-v1') : null
+    const fallbackStored = typeof window !== 'undefined' ? window.localStorage.getItem('monthly-budget-data') : null
+    const toParse = stored || fallbackStored
+    if (toParse) {
+      try {
+        const parsed = JSON.parse(toParse)
+        if (parsed && typeof parsed === 'object') {
+          setMonthlyData(parsed)
+        }
+      } catch {}
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const serialized = JSON.stringify(monthlyData || {})
+        window.localStorage.setItem('monthly-budget-data-v1', serialized)
+        window.localStorage.setItem('monthly-budget-data', serialized)
+      }
+    } catch {}
+  }, [monthlyData])
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state?.categoryId) {
+        setSelectedCategoryId(event.state.categoryId)
+      } else {
+        setSelectedCategoryId(null)
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
   const monthOptions = getMonthOptions()
+  const canEdit = isSuperadmin && !isLocked
 
   const currentMonthData = useMemo(() => {
     const data = monthlyData || {}
@@ -142,6 +217,10 @@ function App() {
   }, [currentMonthData])
 
   const handleSubmission = async (categoryId: string, subItemId: string | undefined, amount: number, description: string, executionMonth: string, evidence: { fileName: string; fileSize: number; fileType: string; uploadDate: string }): Promise<boolean> => {
+    if (!canEdit) {
+      toast.error('Hanya superadmin yang dapat membuat pengajuan')
+      return false
+    }
     const cats = categories || []
     
     const newSubmission: Submission = {
@@ -210,6 +289,10 @@ function App() {
   }
 
   const handleSaveCategory = (categoryData: Omit<BudgetCategory, 'id'> & { id?: string }) => {
+    if (!isSuperadmin) {
+      toast.error('Hanya superadmin yang dapat mengubah kategori.')
+      return
+    }
     if (isLocked) {
       toast.error('Anggaran terkunci. Tidak dapat mengedit kategori.')
       return
@@ -234,6 +317,10 @@ function App() {
   }
 
   const handleDeleteCategory = (categoryId: string) => {
+    if (!isSuperadmin) {
+      toast.error('Hanya superadmin yang dapat menghapus kategori.')
+      return
+    }
     if (isLocked) {
       toast.error('Anggaran terkunci. Tidak dapat menghapus kategori.')
       return
@@ -252,6 +339,10 @@ function App() {
   }
 
   const handleEditCategory = (category: BudgetCategory) => {
+    if (!isSuperadmin) {
+      toast.error('Hanya superadmin yang dapat mengedit kategori.')
+      return
+    }
     if (isLocked) {
       toast.error('Anggaran terkunci. Tidak dapat mengedit kategori.')
       return
@@ -262,11 +353,35 @@ function App() {
 
   const handleCategoryClick = (categoryId: string) => {
     setSelectedCategoryId(categoryId)
+    window.history.pushState(
+      { categoryId },
+      '',
+      `?category=${categoryId}`
+    )
   }
 
   const handleAddSubmissionFromDetail = (subItemId: string) => {
+    if (!canEdit) {
+      toast.error('Hanya superadmin yang dapat membuat pengajuan')
+      return
+    }
     setPreSelectedSubItem(subItemId)
     setDialogOpen(true)
+  }
+
+  const handleSuperadminLogin = async (e: FormEvent) => {
+    e.preventDefault()
+    setIsAuthSubmitting(true)
+    const success = await login(superadminPassword)
+    setIsAuthSubmitting(false)
+
+    if (success) {
+      toast.success('Berhasil masuk sebagai superadmin')
+      setSuperadminPassword('')
+      setAuthDialogOpen(false)
+    } else {
+      toast.error('Kata sandi superadmin salah')
+    }
   }
 
   const getCategoryName = (categoryId: string): string => {
@@ -339,110 +454,25 @@ function App() {
               <p className="text-muted-foreground mt-1">Human Capital & General Affairs</p>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
-              <Button
-                variant={isLocked ? "destructive" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setIsLocked((current) => !current)
-                  toast.success(isLocked ? 'Anggaran dibuka untuk editing' : 'Anggaran dikunci')
-                }}
-                className="gap-2"
-              >
-                {isLocked ? (
-                  <>
-                    <Lock size={16} weight="bold" />
-                    Terkunci
-                  </>
-                ) : (
-                  <>
-                    <LockOpen size={16} weight="bold" />
-                    Terbuka
-                  </>
-                )}
-              </Button>
-              
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={viewMode === 'monthly' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('monthly')}
-                  className="gap-2"
-                >
-                  <Calendar size={16} weight="duotone" />
-                  Bulanan
-                </Button>
-                <Button
-                  variant={viewMode === 'yearly' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('yearly')}
-                  className="gap-2"
-                >
-                  <ChartLine size={16} weight="duotone" />
-                  Tahunan
-                </Button>
-              </div>
-
-              {viewMode === 'monthly' ? (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => navigateMonth('prev')}
-                    disabled={monthOptions.indexOf(selectedMonth) === 0}
-                  >
-                    <ArrowLeft size={16} />
-                  </Button>
-                  <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {monthOptions.map(month => (
-                        <SelectItem key={month} value={month}>
-                          {formatMonth(month)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => navigateMonth('next')}
-                    disabled={monthOptions.indexOf(selectedMonth) === monthOptions.length - 1}
-                  >
-                    <ArrowRight size={16} />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setSelectedYear(y => y - 1)}
-                  >
-                    <ArrowLeft size={16} />
-                  </Button>
-                  <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
-                    <SelectTrigger className="w-[140px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[2024, 2025, 2026, 2027, 2028].map(year => (
-                        <SelectItem key={year} value={String(year)}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setSelectedYear(y => y + 1)}
-                  >
-                    <ArrowRight size={16} />
-                  </Button>
-                </div>
-              )}
+              <Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Pilih View" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="program">
+                    <div className="flex items-center gap-2">
+                      <Calendar size={16} weight="duotone" />
+                      Program
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="yearly">
+                    <div className="flex items-center gap-2">
+                      <ChartLine size={16} weight="duotone" />
+                      Tahunan
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
 
               {!selectedCategoryId && (
                 <DropdownMenu>
@@ -452,24 +482,73 @@ function App() {
                       Menu
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    {viewMode === 'monthly' && (
-                      <DropdownMenuItem onClick={() => setDialogOpen(true)}>
+                  <DropdownMenuContent align="end" className="w-64">
+                    {viewMode === 'program' && (
+                      <DropdownMenuItem
+                        disabled={!canEdit}
+                        onClick={() => {
+                          if (!canEdit) {
+                            toast.error('Hanya superadmin yang dapat membuat pengajuan')
+                            return
+                          }
+                          setDialogOpen(true)
+                        }}
+                      >
                         <Plus size={16} weight="bold" className="mr-2" />
                         Buat Pengajuan
                       </DropdownMenuItem>
                     )}
-                    {!isLocked && (
-                      <DropdownMenuItem onClick={() => {
+                    <DropdownMenuItem
+                      disabled={!canEdit}
+                      onClick={() => {
+                        if (!canEdit) {
+                          toast.error('Hanya superadmin yang dapat menambah kategori')
+                          return
+                        }
                         setEditingCategory(undefined)
                         setCategoryDialogOpen(true)
-                      }}>
-                        <Plus size={16} weight="bold" className="mr-2" />
-                        Tambah Kategori
-                      </DropdownMenuItem>
-                    )}
+                      }}
+                    >
+                      <Plus size={16} weight="bold" className="mr-2" />
+                      Tambah Kategori
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (isSuperadmin) {
+                          logout()
+                          toast.success('Logout Superadmin')
+                        } else {
+                          setAuthDialogOpen(true)
+                        }
+                      }}
+                    >
+                      <ShieldCheck size={16} weight="bold" className="mr-2" />
+                      {isSuperadmin ? 'Logout Superadmin' : 'Login Superadmin'}
+                      {isSuperadmin && <SignOut size={14} className="ml-2" />}
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              )}
+              {!selectedCategoryId && (
+                <Button
+                  variant={isLocked ? "destructive" : "outline"}
+                  size="icon"
+                  disabled={!isSuperadmin}
+                  onClick={() => {
+                    if (!isSuperadmin) {
+                      toast.error('Hanya superadmin yang dapat mengunci anggaran')
+                      return
+                    }
+                    setIsLocked((current) => !current)
+                    toast.success(isLocked ? 'Anggaran dibuka untuk editing' : 'Anggaran dikunci')
+                  }}
+                >
+                  {isLocked ? (
+                    <Lock size={16} weight="bold" />
+                  ) : (
+                    <LockOpen size={16} weight="bold" />
+                  )}
+                </Button>
               )}
             </div>
           </div>
@@ -491,10 +570,14 @@ function App() {
           <CategoryDetailView
             category={selectedCategory}
             categoryData={selectedCategoryData}
-            onBack={() => setSelectedCategoryId(null)}
+            onBack={() => {
+              setSelectedCategoryId(null)
+              window.history.back()
+            }}
             onEdit={() => handleEditCategory(selectedCategory)}
             onAddSubmission={handleAddSubmissionFromDetail}
             isLocked={isLocked}
+            canEdit={canEdit}
           />
         ) : viewMode === 'yearly' ? (
           <YearlyView
@@ -572,7 +655,7 @@ function App() {
                   
                   return (
                     <div key={category.id} className="relative group">
-                      {!isLocked && (
+                      {canEdit && (
                         <div className="absolute top-3 right-3 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
                             size="icon"
@@ -625,6 +708,7 @@ function App() {
             <TabsContent value="submissions">
               <SubmissionsTable 
                 submissions={allSubmissions}
+                categories={categories || []}
                 getCategoryName={getCategoryName}
               />
             </TabsContent>
@@ -645,6 +729,7 @@ function App() {
         getRemainingBudget={getRemainingBudget}
         preSelectedCategory={selectedCategoryId || undefined}
         preSelectedSubItem={preSelectedSubItem}
+        canSubmit={canEdit}
       />
 
       <CategoryDialog
@@ -673,6 +758,39 @@ function App() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={authDialogOpen} onOpenChange={setAuthDialogOpen}>
+        <DialogContent>
+          <form onSubmit={handleSuperadminLogin} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>Masuk sebagai Superadmin</DialogTitle>
+              <DialogDescription>
+                Masukkan kata sandi superadmin untuk mengaktifkan mode edit.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <Label htmlFor="superadmin-password">Kata Sandi</Label>
+              <Input
+                id="superadmin-password"
+                type="password"
+                value={superadminPassword}
+                onChange={(e) => setSuperadminPassword(e.target.value)}
+                placeholder="Masukkan kata sandi"
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={() => setAuthDialogOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={isAuthSubmitting}>
+                {isAuthSubmitting ? 'Memeriksa...' : 'Masuk'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Toaster />
     </div>

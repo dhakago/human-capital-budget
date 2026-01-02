@@ -114,7 +114,7 @@ export function YearlyView({ year, categories, monthlyData }: YearlyViewProps) {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="font-display text-lg">
-                    {formatMonth(stat.month)}
+                    {new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(stat.month))}
                   </CardTitle>
                   <Badge className={getStatusColor(stat.percentage)}>
                     {stat.percentage}%

@@ -57,8 +57,9 @@ export function BudgetOverview({ totalAllocated, totalUsed, totalRemaining, cate
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
+          className="h-full"
         >
-          <Card className="hover:shadow-md transition-shadow duration-300">
+          <Card className="h-full hover:shadow-md transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -81,8 +82,9 @@ export function BudgetOverview({ totalAllocated, totalUsed, totalRemaining, cate
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: (index + 2) * 0.1 }}
+          className="h-full"
         >
-          <Card className="hover:shadow-md transition-shadow duration-300">
+          <Card className="h-full hover:shadow-md transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">

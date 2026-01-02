@@ -61,8 +61,11 @@ export const formatCurrency = (amount: number): string => {
 }
 
 export const formatMonth = (monthStr: string): string => {
-  const date = new Date(monthStr + '-01')
+  // Supports both YYYY-MM and YYYY-MM-DD and formats with day for clarity
+  const normalized = monthStr.length === 7 ? `${monthStr}-01` : monthStr
+  const date = new Date(normalized)
   return new Intl.DateTimeFormat('id-ID', {
+    day: '2-digit',
     month: 'long',
     year: 'numeric'
   }).format(date)

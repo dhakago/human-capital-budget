@@ -33,7 +33,8 @@ export function CategoryDialog({ open, onOpenChange, category, onSave }: Categor
     if (field === 'name') {
       updated[index].name = value as string
     } else {
-      updated[index].monthlyBudget = Number(value)
+      const raw = String(value).replace(/\D/g, '')
+      updated[index].monthlyBudget = raw ? parseInt(raw, 10) : 0
     }
     setSubItems(updated)
   }
@@ -108,9 +109,10 @@ export function CategoryDialog({ open, onOpenChange, category, onSave }: Categor
                   </div>
                   <div className="w-48">
                     <Input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       placeholder="Budget per bulan"
-                      value={item.monthlyBudget}
+                      value={item.monthlyBudget ? item.monthlyBudget.toLocaleString('id-ID') : ''}
                       onChange={(e) => handleUpdateSubItem(index, 'monthlyBudget', e.target.value)}
                     />
                   </div>

@@ -33,13 +33,13 @@ export function BudgetCard({ categoryName, allocated, used, submissionCount, ico
     >
       <Card className="hover:shadow-lg transition-shadow duration-300 h-full">
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3 overflow-hidden">
+            <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
               <div className="p-2 rounded-lg bg-primary/10 shrink-0">
                 <Wallet className="text-primary" size={20} weight="duotone" />
               </div>
-              <div className="min-w-0 flex-1">
-                <CardTitle className="text-lg truncate">{categoryName}</CardTitle>
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <CardTitle className="text-lg truncate whitespace-nowrap overflow-hidden text-ellipsis" title={categoryName}>{categoryName}</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
                   {submissionCount} pengajuan
                 </p>

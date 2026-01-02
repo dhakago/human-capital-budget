@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { BudgetCategory } from '@/lib/budget-utils'
-import { formatCurrency, formatMonth, getMonthOptions } from '@/lib/budget-utils'
+import { formatCurrency, formatMonth } from '@/lib/budget-utils'
 import { toast } from 'sonner'
 import { UploadSimple, File } from '@phosphor-icons/react'
 
@@ -18,6 +18,7 @@ interface SubmissionDialogProps {
   getRemainingBudget: (categoryId: string, subItemId?: string) => number
   preSelectedCategory?: string
   preSelectedSubItem?: string
+  canSubmit: boolean
 }
 
 export function SubmissionDialog({ 
@@ -27,13 +28,16 @@ export function SubmissionDialog({
   onSubmit, 
   getRemainingBudget,
   preSelectedCategory,
-  preSelectedSubItem 
+  preSelectedSubItem,
+  canSubmit
 }: SubmissionDialogProps) {
   const [categoryId, setCategoryId] = useState('')
   const [subItemId, setSubItemId] = useState('')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
+  const [executionDay, setExecutionDay] = useState('')
   const [executionMonth, setExecutionMonth] = useState('')
+  const [executionYear, setExecutionYear] = useState('')
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -48,9 +52,22 @@ export function SubmissionDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!canSubmit) {
+      toast.error('Hanya superadmin yang dapat membuat pengajuan')
+      return
+    }
     
-    if (!categoryId || !amount || !description || !executionMonth) {
+    if (!categoryId || !amount || !description || !executionDay || !executionMonth || !executionYear) {
       toast.error('Mohon lengkapi semua field')
+      return
+    }
+
+    const executionDate = `${executionYear}-${executionMonth}-${executionDay}`
+
+    const parsedDate = new Date(executionDate)
+    if (isNaN(parsedDate.getTime())) {
+      toast.error('Tanggal pelaksanaan tidak valid')
       return
     }
 
@@ -64,7 +81,7 @@ export function SubmissionDialog({
       return
     }
 
-    const numAmount = parseFloat(amount)
+    const numAmount = parseInt(amount.replace(/\./g, ''), 10)
     if (isNaN(numAmount) || numAmount <= 0) {
       toast.error('Jumlah harus lebih dari 0')
       return
@@ -104,7 +121,7 @@ export function SubmissionDialog({
     }
 
     setIsSubmitting(true)
-    const success = await onSubmit(categoryId, subItemId, numAmount, description, executionMonth, evidence)
+    const success = await onSubmit(categoryId, subItemId, numAmount, description, executionDate, evidence)
     setIsSubmitting(false)
 
     if (success) {
@@ -112,7 +129,9 @@ export function SubmissionDialog({
       setSubItemId('')
       setAmount('')
       setDescription('')
+      setExecutionDay('')
       setExecutionMonth('')
+      setExecutionYear('')
       setEvidenceFile(null)
       onOpenChange(false)
       toast.success('Pengajuan berhasil dibuat', {
@@ -137,7 +156,26 @@ export function SubmissionDialog({
 
   const selectedCategory = categories.find(c => c.id === categoryId)
   const remainingBudget = categoryId && subItemId ? getRemainingBudget(categoryId, subItemId) : 0
-  const monthOptions = getMonthOptions()
+  const yearOptions = Array.from({ length: 5 }, (_, i) => `${new Date().getFullYear() - 1 + i}`)
+
+  const getDaysInMonth = (year: number, month: number) => {
+    return new Date(year, month, 0).getDate()
+  }
+
+  const monthNames = Array.from({ length: 12 }, (_, idx) =>
+    new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2000, idx, 1))
+  )
+
+  const parsedYear = Number(executionYear || new Date().getFullYear())
+  const parsedMonth = Number(executionMonth || new Date().getMonth() + 1)
+  const daysInMonth = getDaysInMonth(parsedYear, parsedMonth)
+  const dayOptions = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}`.padStart(2, '0'))
+
+  useEffect(() => {
+    if (executionDay && !dayOptions.includes(executionDay)) {
+      setExecutionDay('')
+    }
+  }, [executionMonth, executionYear])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -202,29 +240,60 @@ export function SubmissionDialog({
               <Label htmlFor="amount">Jumlah (IDR)</Label>
               <Input
                 id="amount"
-                type="number"
+                type="text"
+                inputMode="numeric"
                 placeholder="0"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min="0"
-                step="1000"
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, '')
+                  setAmount(raw ? Number(raw).toLocaleString('id-ID') : '')
+                }}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="execution-month">Estimasi Pelaksanaan</Label>
-              <Select value={executionMonth} onValueChange={setExecutionMonth}>
-                <SelectTrigger id="execution-month">
-                  <SelectValue placeholder="Pilih bulan pelaksanaan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {monthOptions.map(month => (
-                    <SelectItem key={month} value={month}>
-                      {formatMonth(month)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-1">
+              <Label>Waktu Pelaksanaan</Label>
+              <div className="grid grid-flow-col auto-cols-max gap-2">
+                <Select value={executionDay} onValueChange={setExecutionDay}>
+                  <SelectTrigger className="w-auto">
+                    <SelectValue placeholder="Tanggal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dayOptions.map((day) => (
+                      <SelectItem key={day} value={day}>
+                        {day}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={executionMonth} onValueChange={setExecutionMonth}>
+                  <SelectTrigger className="w-auto">
+                    <SelectValue placeholder="Bulan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {monthNames.map((name, idx) => {
+                      const month = `${(idx + 1).toString().padStart(2, '0')}`
+                      return (
+                        <SelectItem key={month} value={month}>
+                          {name}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+
+                <Select value={executionYear} onValueChange={setExecutionYear}>
+                  <SelectTrigger className="w-auto">
+                    <SelectValue placeholder="Tahun" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((y) => (
+                      <SelectItem key={y} value={y}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -281,7 +350,7 @@ export function SubmissionDialog({
             <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
               Batal
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !canSubmit}>
               {isSubmitting ? 'Memproses...' : 'Buat Pengajuan'}
             </Button>
           </DialogFooter>

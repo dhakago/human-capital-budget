@@ -9,7 +9,8 @@
         "build": "tsc -b --noCheck && vite build",
         "lint": "eslint .",
         "optimize": "vite optimize",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "deploy": "npm run build && touch dist/.nojekyll && echo 'Budget HCGA 2026' > dist/CNAME || true"
     },
     "dependencies": {
         "@github/spark": ">=0.43.1 <1",
