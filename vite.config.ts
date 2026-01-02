@@ -1,16 +1,14 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig, PluginOption } from "vite";
+import path from 'path'
 
 import sparkPlugin from "@github/spark/spark-vite-plugin";
 import createIconImportProxy from "@github/spark/vitePhosphorIconProxyPlugin";
-import { resolve } from 'path'
-
-const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
 
 // https://vite.dev/config/
-export default defineConfig({
-  base: '/human-capital-budget/',
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/human-capital-budget/' : '/',
   plugins: [
     react(),
     tailwindcss(),
@@ -20,7 +18,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': resolve(projectRoot, 'src')
+      '@': path.resolve(__dirname, 'src')
     }
   },
-});
+}));
